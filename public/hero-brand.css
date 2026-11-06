@@ -1,0 +1,2 @@
+.hero-sticker{font:44px/.72 Georgia,'Times New Roman',serif;letter-spacing:-.08em;justify-items:center;align-content:center;padding:8px 10px 0}.hero-sticker small{font:9px/1.2 'DM Mono',monospace;letter-spacing:.08em;margin-top:17px;white-space:nowrap}.hero-sticker br+small{display:block}
+@media(max-width:760px){.hero-sticker{font-size:28px;line-height:.74;padding-top:5px}.hero-sticker small{font-size:7px;margin-top:12px}}

@@ -1,0 +1,1 @@
+.product-detail{position:fixed;inset:0;z-index:8;overflow:auto;min-height:100vh;background:var(--cream);padding:45px 6vw 90px;animation:detail-in .28s ease-out}.detail-is-open{overflow:hidden}@keyframes detail-in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}@media(max-width:760px){.product-detail{padding:28px 20px 65px}}

@@ -1,2 +1,30 @@
-Spesifikasi Teknis & Arsitektur Sistem Goddess Club Store (Laravel 13).pdf
+/vendor
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# Laravel
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+.phpunit.cache
+/.phpunit.result.cache
+
+# Environment
 .env
+.env.backup
+.env.*.local
+
+# Large design & documentation files
+Spesifikasi Teknis & Arsitektur Sistem Goddess Club Store (Laravel 13).pdf
+*.make
+
+# IDE & Editor
+.idea/
+.vscode/
+.fleet/
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,124 @@
+/*
+Auth page styles — Goddess Club Store dark theme
+Colors: #11100f (body), #f4eee2 (cream), #e62927 (crimson accent)
+Fonts: Georgia serif, DM Mono monospace, Space Grotesk
+*/
+
+.auth-page {
+    min-height: 100vh;
+    background: #11100f;
+    color: #f4eee2;
+    font-family: 'Georgia', serif;
+}
+
+.auth-shell {
+    max-width: 420px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #212529;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+}
+
+.auth-wordmark {
+    font-family: 'Georgia', serif;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #e62927;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    display: block;
+}
+
+.auth-wordmark span {
+    color: #f4eee2;
+    font-weight: normal;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    letter-spacing: .15em;
+    color: #aaa;
+    margin-bottom: 1rem;
+}
+
+.auth-card h1 {
+    font-size: 1.75rem;
+    margin-bottom: .5rem;
+    color: #f4eee2;
+}
+
+.auth-intro {
+    color: #bbb;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.auth-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.auth-card label {
+    font-size: 0.875rem;
+    font-weight: bold;
+    color: #f4eee2;
+}
+
+.auth-card input {
+    background: #333;
+    border: 1px solid #555;
+    color: #f4eee2;
+    padding: .6rem .8rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    border-radius: 4px;
+    transition: border-color .2s;
+}
+
+.auth-card input:focus {
+    outline: none;
+    border-color: #e62927;
+}
+
+.btn-red {
+    background: #e62927;
+    color: #11100f;
+    font-weight: bold;
+    padding: .7rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background .2s;
+}
+
+.btn-red:hover {
+    background: #d62020;
+}
+
+/* Register specific */
+.join-the-club {
+    color: #aaa;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+/* Success/Error messages */
+.alert {
+    padding: .75rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background: #2a3f2f;
+    color: #c3e8b5;
+}
+
+.alert-error {
+    background: #4a2a2a;
+    color: #ff7878;
+}
