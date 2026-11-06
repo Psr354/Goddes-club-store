@@ -11,6 +11,7 @@ services:
         condition: service_started
     volumes:
       - .:/var/www/html
+      - /var/www/html/vendor
 
   mysql:
     image: mysql:8.4

@@ -59,7 +59,7 @@ Sebelum menjalankan proyek, pastikan telah terinstall:
 
 ## 🚀 Instalasi & Setup
 
-Ikuti langkah-langkah berikut untuk menjalankan proyek di lokal:
+Ikuti langkah-langkah berikut untuk menjalankan proyek di lokal menggunakan Docker:
 
 ```bash
 # 1. Clone repository
@@ -69,22 +69,21 @@ cd Goddes-club-store
 # 2. Salin file environment
 cp .env.example .env
 
-# 3. Generate APP_KEY
-php artisan key:generate
+# 3. Jalankan seluruh layanan dengan Docker Compose
+docker compose up -d --build
 
-# 4. Jalankan Docker Compose (MySQL, Redis, Mailpit, App)
-docker compose up -d
+# 4. Generate Application Key di dalam kontainer
+docker compose exec app php artisan key:generate
 
-# 5. Tunggu layanan siap, lalu jalankan migrasi & seed
+# 5. Jalankan migrasi basis data dan seeder data awal
 docker compose exec app php artisan migrate:refresh --seed
-
-# 6. Build assets (jika ada) dan jalankan server
-docker compose exec app php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-Akses aplikasi di: **http://localhost:8000**
+Layanan siap digunakan dan dapat langsung diakses melalui peramban:
+* **Toko Goddess Club Store:** **http://localhost:8000**
+* **Mailpit (In-box Pengujian Email):** **http://localhost:8025**
 
-> 📝 **Catatan:** Port 8000 adalah port utama aplikasi. Jangan gunakan port 8001, 8010, atau 8011 yang digunakan oleh layanan lama.
+> 📝 **Catatan:** Server web Laravel otomatis dijalankan oleh kontainer pada port 8000. Tidak perlu menjalankan perintah `php artisan serve` secara manual di terminal.
 
 ---
 
