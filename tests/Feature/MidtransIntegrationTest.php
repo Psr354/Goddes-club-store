@@ -2,10 +2,6 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Http;
-use Tests\TestCase;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -15,13 +11,19 @@ use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\UserAddress;
 use App\Services\MidtransService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
 
 class MidtransIntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
     protected User $user;
+
     protected Product $product;
+
     protected ProductVariant $variant;
 
     protected function setUp(): void
@@ -158,7 +160,7 @@ class MidtransIntegrationTest extends TestCase
         $statusCode = '200';
         $grossAmount = '40.00';
         $serverKey = 'test-secret-server-key';
-        $validSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+        $validSignature = hash('sha512', $orderId.$statusCode.$grossAmount.$serverKey);
 
         // Valid signature succeeds
         $response = $this->postJson('/api/payment/webhook', [

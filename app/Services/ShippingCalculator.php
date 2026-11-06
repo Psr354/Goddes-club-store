@@ -44,10 +44,10 @@ class ShippingCalculator
 
         // Weight rounded up to nearest 1000g (1 kg minimum)
         $weightKg = max(1, (int) ceil($weightGram / 1000));
-        
+
         $baseFee = $courierData['base_rate'];
         $additionalWeightFee = max(0, $weightKg - 1) * $courierData['per_kg'];
-        
+
         // Slight regional variation based on postal code prefix
         $regionalMultiplier = 1.0;
         if (str_starts_with($destinationPostal, '1')) {

@@ -2,13 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\OrderTracking;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\User;
 use App\Models\UserAddress;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;

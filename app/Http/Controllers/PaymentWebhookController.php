@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ProductVariant;
 use App\Notifications\OrderConfirmed;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PaymentWebhookController extends Controller
 {
@@ -56,7 +56,7 @@ class PaymentWebhookController extends Controller
         // Optional HMAC SHA512 signature check (if SECRET_KEY provided)
         $serverKey = config('services.midtrans.server_key') ?? env('MIDTRANS_SERVER_KEY');
         if ($serverKey && isset($payload['signature_key'], $payload['status_code'], $payload['gross_amount'])) {
-            $expectedSignature = hash('sha512', $payload['order_id'] . $payload['status_code'] . $payload['gross_amount'] . $serverKey);
+            $expectedSignature = hash('sha512', $payload['order_id'].$payload['status_code'].$payload['gross_amount'].$serverKey);
             if ($payload['signature_key'] !== $expectedSignature) {
                 return response()->json([
                     'success' => false,
@@ -137,7 +137,7 @@ class PaymentWebhookController extends Controller
             $order->trackings()->create([
                 'status' => 'paid',
                 'title' => 'Pembayaran Berhasil Dikonfirmasi',
-                'description' => "Pembayaran diterima melalui " . strtoupper($paymentMethod) . ". Merch favoritmu sedang kami siapkan.",
+                'description' => 'Pembayaran diterima melalui '.strtoupper($paymentMethod).'. Merch favoritmu sedang kami siapkan.',
                 'occurred_at' => now(),
             ]);
         });

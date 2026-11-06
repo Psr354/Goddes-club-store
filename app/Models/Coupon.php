@@ -34,9 +34,9 @@ class Coupon extends Model
     public function isValid(float $subtotal): bool
     {
         return $this->is_active
-            && (!$this->starts_at || $this->starts_at->isPast())
-            && (!$this->expires_at || $this->expires_at->isFuture())
-            && (!$this->usage_limit || $this->used_count < $this->usage_limit)
+            && (! $this->starts_at || $this->starts_at->isPast())
+            && (! $this->expires_at || $this->expires_at->isFuture())
+            && (! $this->usage_limit || $this->used_count < $this->usage_limit)
             && $subtotal >= $this->min_order_amount;
     }
 

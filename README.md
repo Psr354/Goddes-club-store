@@ -1,6 +1,6 @@
 # 🛍️ Goddess Club Store
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com)
+[![Tests](https://github.com/Psr354/Goddes-club-store/actions/workflows/tests.yml/badge.svg)](https://github.com/Psr354/Goddes-club-store/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0-orange)](https://github.com)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED)](https://www.docker.com)
@@ -44,6 +44,24 @@ Proyek ini menyelesaikan masalah kebutuhan toko merch yang memiliki katalog prod
 | **Frontend** | Blade HTML, Plain JavaScript, Layered CSS |
 | **Fonts** | Google Fonts: DM Mono, Space Grotesk, Georgia |
 | **Theme** | Dark mode (#11100f / #f4eee2 / #e62927) |
+
+---
+
+## 📐 Arsitektur & Diagram Sistem
+
+### Entity Relationship Diagram (ERD)
+Diagram relasi basis data yang mencakup entitas Users, Products, Variants, Carts, Orders, Payments, dan Trackings:
+
+<p align="center">
+  <img src="docs/diagrams/erd.png" alt="Entity Relationship Diagram (ERD)" width="850">
+</p>
+
+### Alur Sistem (Flowchart)
+Diagram alur proses belanja mulai dari penjelajahan katalog, pemilihan varian produk, keranjang belanja, hingga checkout dan webhook status pembayaran:
+
+<p align="center">
+  <img src="docs/diagrams/flowchart.png" alt="System Flowchart" width="850">
+</p>
 
 ---
 

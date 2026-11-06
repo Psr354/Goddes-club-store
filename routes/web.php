@@ -1,20 +1,21 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Models\Category;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AccountController;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\PaymentWebhookController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\TrackController;
-use App\Services\ShippingCalculator;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\PaymentWebhookController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\TrackController;
+use App\Models\Category;
+use App\Services\ShippingCalculator;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,7 +71,7 @@ Route::post('/api/cart/promo', [CartController::class, 'promo']);
 
 Route::post('/api/wishlist/toggle', [AccountController::class, 'toggleWishlist']);
 
-Route::get('/api/shipping/calculate', function (\Illuminate\Http\Request $request) {
+Route::get('/api/shipping/calculate', function (Request $request) {
     $postal = $request->input('postal', '12160');
     $weight = (int) $request->input('weight', 300);
     $courier = $request->input('courier', 'JNE');

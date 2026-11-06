@@ -2,9 +2,6 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
-use Tests\TestCase;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -14,13 +11,18 @@ use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\UserAddress;
 use App\Notifications\OrderConfirmed;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Tests\TestCase;
 
 class PaymentWebhookTest extends TestCase
 {
     use RefreshDatabase;
 
     protected Order $order;
+
     protected ProductVariant $variant;
+
     protected User $user;
 
     protected function setUp(): void

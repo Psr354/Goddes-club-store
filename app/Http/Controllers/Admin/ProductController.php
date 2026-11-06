@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductVariant;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -94,7 +94,7 @@ class ProductController extends Controller
             'kind' => 'nullable|string|max:30',
         ]);
 
-        $data['slug'] = \Illuminate\Support\Str::slug($data['slug']);
+        $data['slug'] = Str::slug($data['slug']);
 
         return $data;
     }

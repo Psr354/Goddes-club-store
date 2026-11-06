@@ -2,10 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -15,6 +11,10 @@ use App\Models\UserAddress;
 use App\Notifications\OrderConfirmed;
 use App\Services\MidtransService;
 use App\Services\ShippingCalculator;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
@@ -101,7 +101,7 @@ class CheckoutController extends Controller
                         ->first();
 
                     if (! $variant) {
-                        throw new \RuntimeException("Varian produk tidak ditemukan.");
+                        throw new \RuntimeException('Varian produk tidak ditemukan.');
                     }
 
                     if ($variant->availableStock() < $item->quantity) {
@@ -127,7 +127,7 @@ class CheckoutController extends Controller
                 // 3. Create Order
                 $order = Order::create([
                     'user_id' => $user->id,
-                    'invoice_number' => 'GCS-' . strtoupper(Str::random(8)),
+                    'invoice_number' => 'GCS-'.strtoupper(Str::random(8)),
                     'address_id' => $address->id,
                     'coupon_id' => $coupon?->id,
                     'subtotal' => $subtotal,
@@ -158,7 +158,7 @@ class CheckoutController extends Controller
                 }
 
                 // 5. Create Payment record with unique transaction ID
-                $transactionId = 'PAY-' . strtoupper(Str::random(12));
+                $transactionId = 'PAY-'.strtoupper(Str::random(12));
                 Payment::create([
                     'order_id' => $order->id,
                     'transaction_id' => $transactionId,

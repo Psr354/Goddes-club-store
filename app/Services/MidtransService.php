@@ -10,9 +10,11 @@ use Illuminate\Support\Str;
 class MidtransService
 {
     public const SANDBOX_SNAP_URL = 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+
     public const PRODUCTION_SNAP_URL = 'https://app.midtrans.com/snap/v1/transactions';
 
     public const SANDBOX_SNAP_JS = 'https://app.sandbox.midtrans.com/snap/snap.js';
+
     public const PRODUCTION_SNAP_JS = 'https://app.midtrans.com/snap/snap.js';
 
     /**
@@ -74,7 +76,7 @@ class MidtransService
                 'id' => (string) $item->product_variant_id,
                 'price' => (int) round($item->unit_price),
                 'quantity' => (int) $item->quantity,
-                'name' => mb_strimwidth($item->product_name . ($item->sku ? ' (' . $item->sku . ')' : ''), 0, 48),
+                'name' => mb_strimwidth($item->product_name.($item->sku ? ' ('.$item->sku.')' : ''), 0, 48),
             ];
         }
 
@@ -94,7 +96,7 @@ class MidtransService
                 'id' => 'SHIPPING',
                 'price' => (int) round($order->shipping_fee),
                 'quantity' => 1,
-                'name' => 'Ongkos Kirim (' . ($order->courier_code ?: 'JNE') . ')',
+                'name' => 'Ongkos Kirim ('.($order->courier_code ?: 'JNE').')',
             ];
         }
 
@@ -142,14 +144,15 @@ class MidtransService
                     }
                 }
 
-                Log::warning('Midtrans Snap API responded with error: ' . $response->body());
+                Log::warning('Midtrans Snap API responded with error: '.$response->body());
             } catch (\Throwable $e) {
-                Log::error('Midtrans Snap request exception: ' . $e->getMessage());
+                Log::error('Midtrans Snap request exception: '.$e->getMessage());
             }
         }
 
         // Graceful sandbox simulated fallback for offline/development testing
-        $mockToken = 'sandbox-snap-' . Str::random(24);
+        $mockToken = 'sandbox-snap-'.Str::random(24);
+
         return [
             'token' => $mockToken,
             'redirect_url' => route('track', ['order' => $order->invoice_number, 'snap_simulated' => 1]),
@@ -167,7 +170,7 @@ class MidtransService
             return false;
         }
 
-        $expected = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+        $expected = hash('sha512', $orderId.$statusCode.$grossAmount.$serverKey);
 
         return hash_equals($expected, $signatureKey);
     }
