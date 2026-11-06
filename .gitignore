@@ -17,7 +17,7 @@ yarn-error.log
 .env.*.local
 
 # Large design & documentation files
-Spesifikasi Teknis & Arsitektur Sistem Goddess Club Store (Laravel 13).pdf
+*.pdf
 *.make
 
 # IDE & Editor

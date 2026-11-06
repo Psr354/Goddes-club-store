@@ -63,8 +63,8 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek di lokal:
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/username/goddess-club-store.git
-cd goddess-club-store
+git clone https://github.com/Psr354/Goddes-club-store.git
+cd Goddes-club-store
 
 # 2. Salin file environment
 cp .env.example .env
@@ -120,6 +120,11 @@ goddess-club-store/
 ├── bootstrap/            # Application bootstrap files
 ├── config/               # Konfigurasi Laravel
 ├── database/             # Migrasi & Seeder
+├── docs/                 # Dokumentasi diagram, arsitektur, dan prototipe
+│   ├── architecture/     # Dokumen spesifikasi arsitektur
+│   ├── design/           # Berkas desain aset
+│   ├── diagrams/         # Flowchart dan ERD
+│   └── prototype/        # Prototipe statis awal (HTML, CSS, JS)
 ├── public/               # Asset publik (CSS, JS, images)
 │   ├── store.css         # Base styles
 │   ├── figma.css         # Figma visual layer
@@ -164,7 +169,7 @@ docker compose exec app php artisan test
 
 1. **Fork** repository ini
 2. Buat **branch** baru (`git checkout -b fitur-baru`)
-3. **Commit** perubahan (`git commit -f "Menambah fitur X"`)
+3. **Commit** perubahan (`git commit -m "Menambah fitur X"`)
 4. **Push** ke branch (`git push origin fitur-baru`)
 5. Buat **Pull Request** ke branch `main`
 
@@ -177,9 +182,9 @@ docker compose exec app php artisan test
 | Informasi | Detail |
 |-----------|--------|
 | **Lisensi** | MIT |
-| **Maintainer** | [Your Name/Organization](https://github.com/username) |
+| **Maintainer** | [Psr354](https://github.com/Psr354) |
 | **Email** | contact@goddessclubstore.id |
-| **GitHub** | [@username](https://github.com/username) |
+| **GitHub** | [@Psr354](https://github.com/Psr354) |
 
 ---
 
