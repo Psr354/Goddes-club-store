@@ -120,11 +120,10 @@ goddess-club-store/
 ├── bootstrap/            # Application bootstrap files
 ├── config/               # Konfigurasi Laravel
 ├── database/             # Migrasi & Seeder
-├── docs/                 # Dokumentasi diagram, arsitektur, dan prototipe
+├── docs/                 # Dokumentasi diagram, arsitektur, dan desain
 │   ├── architecture/     # Dokumen spesifikasi arsitektur
 │   ├── design/           # Berkas desain aset
-│   ├── diagrams/         # Flowchart dan ERD
-│   └── prototype/        # Prototipe statis awal (HTML, CSS, JS)
+│   └── diagrams/         # Flowchart dan ERD (PNG)
 ├── public/               # Asset publik (CSS, JS, images)
 │   ├── store.css         # Base styles
 │   ├── figma.css         # Figma visual layer
