@@ -9,9 +9,9 @@
 
 ## 📖 Deskripsi Singkat
 
-**Goddess Club Store** adalah toko merch e-commerce resmi komunitas Goddess Club yang menjual produk berlimittahunan: apparel, musik & vinyl, serta aksesoris. Aplikasi ini dibangun dengan **Laravel 13 + Docker** menyediakan pengalaman pembelian yang modern, gelap (dark theme), dan responsif — sejalan dengan desain Figma yang telah ditetapkan.
+**Goddess Club Store** adalah toko merch e-commerce resmi komunitas Goddess Club yang menjual produk berlimittahunan: apparel, musik & vinyl, serta aksesoris. Aplikasi ini dibangun dengan **Laravel 13 + Docker** menyediakan pengalaman pembelian yang modern, gelap (dark theme), dan responsif, sejalan dengan desain Figma yang telah ditetapkan.
 
-Proyek ini menyelesaikan masalah kebutuhan toko merch yang memiliki katalog produk, keranjang belanja, pemilihan ukuran, dan simulasi checkout DOKU tanpa perlu backend pembayaran nyata.
+Proyek ini menyediakan solusi toko merch lengkap dengan katalog produk, keranjang belanja, pemilihan varian ukuran, kalkulasi pengiriman, integrasi checkout Midtrans Snap (disertai fallback simulasi untuk pengujian lokal), dan pelacakan pesanan real-time.
 
 ---
 
@@ -23,8 +23,9 @@ Proyek ini menyelesaikan masalah kebutuhan toko merch yang memiliki katalog prod
 - 👕 **Pemilihan Ukuran** — Tombol S, M, L, XL, XXL dengan state `.selected`
 - 📏 **Size Guide Modal** — Tabel lengkap ukuran S–XXL (chest, length, shoulder)
 - 🖼️ **Produk Detail** — Panel full-screen dengan gambar gallery, thumbnails, dan info produk
-- 🛒 **Cart Drawer** — Keranjang slide-out dengan promo code (CLUB10), subtotal, dan checkout simulasi
-- 💳 **Checkout Modal** — Form email + alamat + metode pembayaran DOKU (sandbox) simulasi
+- 🛒 **Cart Drawer** — Keranjang slide-out dengan promo code (CLUB10), subtotal, dan kupon diskon
+- 💳 **Checkout Modal** — Form email, alamat, pemilihan kurir, dan pembayaran Midtrans Snap
+- 📍 **Order Tracking** — Halaman publik pelacakan status pesanan dan nomor resi via invoice acak yang aman dari enumerasi
 - 📱 **Responsive Design** — Mobile-first, breakpoint di 760px, navigasi drawer di mobile
 - ⚡ **Interaksi JavaScript** — Quick add, size selection, quantity control, dismiss modal via Escape key
 - 🎨 **UX Polish** — Hover effect, focus-visible, reduced-motion support, smooth scroll
@@ -42,7 +43,7 @@ Proyek ini menyelesaikan masalah kebutuhan toko merch yang memiliki katalog prod
 | **Mail** | Mailpit (development) |
 | **Container** | Docker + Docker Compose |
 | **Frontend** | Blade HTML, Plain JavaScript, Layered CSS |
-| **Fonts** | Google Fonts: DM Mono, Space Grotesk, Georgia |
+| **Fonts** | Google Fonts: DM Sans, Playfair Display |
 | **Theme** | Dark mode (#11100f / #f4eee2 / #e62927) |
 
 ---
@@ -121,11 +122,16 @@ Layanan siap digunakan dan dapat langsung diakses melalui peramban:
 - Modal akan muncul dengan tabel ukuran lengkap (S–XXL)
 - Tutup modal dengan menekan tombol **×** atau tombol **Escape**
 
-### Checkout Simulasi
+### Checkout & Pembayaran
 
 - Masuk ke keranjang, klik **Proceed to checkout**
-- Isi form email dan alamat pengiriman
-- Klik **Place order** untuk melihat toast "Order received. DOKU payment link is ready."
+- Isi formulir alamat pengiriman dan pilih kurir
+- Klik **Place order** untuk membuka popup pembayaran Midtrans Snap (atau fallback simulasi saat API key belum disetel)
+
+### Pelacakan Pesanan (Order Tracking)
+
+- Akses menu **Track order** di navigasi atau via URL `/track`
+- Masukkan nomor faktur pesanan (contoh: `GCS-XXXXXXXX`) untuk memantau linimasa status pesanan dan nomor resi pengiriman real-time
 
 ---
 
@@ -142,14 +148,10 @@ goddess-club-store/
 │   ├── design/           # Berkas desain aset
 │   └── diagrams/         # Flowchart dan ERD (PNG)
 ├── public/               # Asset publik (CSS, JS, images)
-│   ├── store.css         # Base styles
-│   ├── figma.css         # Figma visual layer
-│   ├── dark-theme.css    # Dark theme conversion
-│   ├── hero-brand.css    # Reality Club emblem typography
-│   ├── detail-features.css # Product detail & size guide
-│   ├── ux-polish.css     # Hover, focus, transition
-│   └── store.js          # Core interactivity
-├── routes/               # web.php (routing)
+│   ├── goddess.css       # Stylesheet utama toko
+│   ├── goddess.js        # Script interaktivitas & API client
+│   └── images/           # Asset media produk
+├── routes/               # web.php & console.php (routing)
 ├── resources/views/      # Blade templates
 ├── docker-compose.yml    # Layanan Docker
 ├── Dockerfile            # Konfigurasi PHP container
@@ -173,11 +175,26 @@ Aplikasi menerapkan sistem **"Satu Login, Dua Dashboard"** dengan verifikasi rol
 
 ## 🧪 Menjalankan Automated Tests
 
-Seluruh pengujian unit dan fitur telah lulus (18 tests, 57 assertions):
+Seluruh pengujian unit dan fitur telah lulus (26 tests):
 
 ```bash
 docker compose exec app php artisan test
 ```
+
+---
+
+## 💳 Konfigurasi Midtrans Sandbox & Keamanan Webhook
+
+Aplikasi telah terintegrasi dengan **Midtrans Snap**:
+1. Buat akun di [Midtrans Sandbox](https://dashboard.sandbox.midtrans.com/).
+2. Buka menu **Settings > Access Keys**, lalu salin:
+   - `Client Key` ke `MIDTRANS_CLIENT_KEY` di file `.env`
+   - `Server Key` ke `MIDTRANS_SERVER_KEY` di file `.env`
+3. Pastikan `MIDTRANS_IS_PRODUCTION=false` untuk lingkungan sandbox.
+4. **Keamanan Webhook:**
+   - Webhook resmi Midtrans diproses melalui `POST /api/payment/webhook`.
+   - Ketika `MIDTRANS_SERVER_KEY` disetel atau pada lingkungan produksi, sistem mewajibkan verifikasi tanda tangan HMAC SHA-512 (`signature_key`). Permintaan tanpa tanda tangan valid otomatis ditolak (HTTP 403).
+   - Untuk pengujian di lingkungan lokal/testing, disediakan endpoint simulasi `POST /api/payment/simulate`. Endpoint ini dinonaktifkan secara otomatis pada lingkungan produksi (`production`).
 
 ---
 
@@ -189,7 +206,7 @@ docker compose exec app php artisan test
 4. **Push** ke branch (`git push origin fitur-baru`)
 5. Buat **Pull Request** ke branch `main`
 
-> ⚠️ Pastikan kode Anda sesuai standar PSR-12, menambahkan test case jika relevant, dan memperbarui dokumentasi jika ada perubahan fitur.
+> ⚠️ Pastikan kode Anda sesuai standar PSR-12 / Laravel Pint, menambahkan test case jika relevan, dan memperbarui dokumentasi jika ada perubahan fitur.
 
 ---
 
@@ -207,13 +224,3 @@ docker compose exec app php artisan test
 *⚡ Dibuat dengan ❤️ untuk Goddess Club — "THE MUSIC STAYS. SO DO WE."*
 
 For a host-only preview, `php artisan serve` is also supported after `composer install`.
-
-## 💳 Konfigurasi Midtrans Sandbox
-
-Aplikasi telah terintegrasi dengan **Midtrans Snap**:
-1. Buat akun di [Midtrans Sandbox](https://dashboard.sandbox.midtrans.com/).
-2. Buka menu **Settings > Access Keys**, lalu salin:
-   - `Client Key` ke `MIDTRANS_CLIENT_KEY` di file `.env`
-   - `Server Key` ke `MIDTRANS_SERVER_KEY` di file `.env`
-3. Pastikan `MIDTRANS_IS_PRODUCTION=false`.
-4. Untuk menguji webhook secara lokal, gunakan webhook simulator di dashboard Midtrans atau endpoint simulasi bawaan: `POST /api/payment/simulate` atau `POST /api/payment/webhook`.

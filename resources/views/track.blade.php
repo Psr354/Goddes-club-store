@@ -9,7 +9,7 @@
   <p>Your next favorite thing is getting closer.</p>
 
   <form id="track-form">
-    <input id="track-input" type="text" placeholder="Order number (e.g. GC-1024)" value="{{ $reference }}" required>
+    <input id="track-input" type="text" placeholder="Invoice number (e.g. GCS-XXXXXXXX)" value="{{ $reference }}" required>
     <button class="primary" type="submit">TRACK ORDER <span>&nearr;</span></button>
   </form>
 

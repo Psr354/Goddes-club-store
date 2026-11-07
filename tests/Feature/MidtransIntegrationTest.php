@@ -187,5 +187,16 @@ class MidtransIntegrationTest extends TestCase
         ]);
 
         $responseInvalid->assertStatus(403);
+
+        // Missing signature key when server key is set fails
+        $responseMissing = $this->postJson('/api/payment/webhook', [
+            'order_id' => $orderId,
+            'status_code' => $statusCode,
+            'gross_amount' => $grossAmount,
+            'transaction_status' => 'settlement',
+            'payment_type' => 'qris',
+        ]);
+
+        $responseMissing->assertStatus(403);
     }
 }

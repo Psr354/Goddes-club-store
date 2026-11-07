@@ -43,7 +43,7 @@ class TrackController extends Controller
         $reference = trim((string) $request->input('order', ''));
 
         if ($reference === '') {
-            return response()->json(['success' => false, 'message' => 'Masukkan nomor pesanan.'], 422);
+            return response()->json(['success' => false, 'message' => 'Masukkan nomor invoice pesanan.'], 422);
         }
 
         $order = $this->find($reference);
@@ -74,8 +74,15 @@ class TrackController extends Controller
             return $order;
         }
 
-        if (preg_match('/^GC-?(\d+)$/', $reference, $matches)) {
-            return Order::with(['items', 'trackings', 'address'])->find((int) $matches[1]);
+        if (auth()->check() && preg_match('/^GC-?(\d+)$/', $reference, $matches)) {
+            $user = auth()->user();
+            $query = Order::with(['items', 'trackings', 'address'])->where('id', (int) $matches[1]);
+
+            if (! $user->is_admin) {
+                $query->where('user_id', $user->id);
+            }
+
+            return $query->first();
         }
 
         return null;

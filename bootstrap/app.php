@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
         ]);
         $middleware->validateCsrfTokens(except: [
-            'api/*',
+            'api/payment/webhook',
             ...(defined('PHPUNIT_COMPOSER_INSTALL') || defined('PEST_RUNNING') ? ['*'] : []),
         ]);
     })

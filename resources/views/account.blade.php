@@ -374,6 +374,7 @@
             </article>
 
             <!-- Interactive Payment Webhook Simulator Panel -->
+            @if (app()->environment('local', 'testing'))
             <div class="account-small-panel" id="payment-sim-box" style="margin-top:16px;background:#241d14;border-color:#755c32;">
               <span class="account-kicker">SIMULASI PAYMENT GATEWAY &amp; WEBHOOK</span>
               <h3 style="margin:4px 0 8px;font-size:16px;">Uji Alur Pembayaran Nyata</h3>
@@ -389,6 +390,7 @@
                 </button>
               </div>
             </div>
+            @endif
 
             <div class="account-small-panel" style="margin-top:20px;">
               <span class="account-kicker">DELIVERY JOURNEY · PROGRESS</span>

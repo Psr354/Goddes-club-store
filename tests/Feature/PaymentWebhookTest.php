@@ -147,4 +147,16 @@ class PaymentWebhookTest extends TestCase
         $this->order->refresh();
         $this->assertEquals('paid', $this->order->status);
     }
+
+    public function test_payment_simulation_blocked_in_production(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+
+        $response = $this->postJson('/api/payment/simulate', [
+            'invoice_number' => 'GCS-TEST001',
+            'action' => 'pay',
+        ]);
+
+        $this->assertTrue(in_array($response->status(), [403, 404]));
+    }
 }

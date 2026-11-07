@@ -85,7 +85,11 @@ Route::get('/api/shipping/calculate', function (Request $request) {
 
 Route::post('/api/checkout', [CheckoutController::class, 'process']);
 Route::post('/api/payment/webhook', [PaymentWebhookController::class, 'handle'])->name('payment.webhook');
-Route::post('/api/payment/simulate', [PaymentWebhookController::class, 'simulate'])->name('payment.simulate');
+
+if (app()->environment('local', 'testing')) {
+    Route::post('/api/payment/simulate', [PaymentWebhookController::class, 'simulate'])->name('payment.simulate');
+}
+
 Route::post('/api/track', [TrackController::class, 'api']);
 
 /*

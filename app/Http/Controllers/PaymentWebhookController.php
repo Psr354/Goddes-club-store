@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ProductVariant;
 use App\Notifications\OrderConfirmed;
+use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,14 +54,18 @@ class PaymentWebhookController extends Controller
             ], 404);
         }
 
-        // Optional HMAC SHA512 signature check (if SECRET_KEY provided)
-        $serverKey = config('services.midtrans.server_key') ?? env('MIDTRANS_SERVER_KEY');
-        if ($serverKey && isset($payload['signature_key'], $payload['status_code'], $payload['gross_amount'])) {
-            $expectedSignature = hash('sha512', $payload['order_id'].$payload['status_code'].$payload['gross_amount'].$serverKey);
-            if ($payload['signature_key'] !== $expectedSignature) {
+        // Enforce HMAC SHA512 signature check when server key is configured or in production
+        $serverKey = MidtransService::serverKey();
+        if ($serverKey || app()->isProduction()) {
+            $signatureKey = (string) ($payload['signature_key'] ?? '');
+            $statusCode = (string) ($payload['status_code'] ?? '');
+            $grossAmount = (string) ($payload['gross_amount'] ?? '');
+            $orderId = (string) ($payload['order_id'] ?? $invoiceNumber);
+
+            if (! $signatureKey || ! MidtransService::verifySignature($orderId, $statusCode, $grossAmount, $signatureKey)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Invalid webhook signature.',
+                    'message' => 'Invalid or missing webhook signature.',
                 ], 403);
             }
         }
@@ -198,6 +203,13 @@ class PaymentWebhookController extends Controller
      */
     public function simulate(Request $request): JsonResponse
     {
+        if (app()->isProduction()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Endpoint simulasi tidak tersedia di lingkungan produksi.',
+            ], 403);
+        }
+
         $data = $request->validate([
             'invoice_number' => 'required|string',
             'action' => 'required|in:pay,cancel',
