@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -44,11 +45,17 @@ class ProductController extends Controller
     {
         $data = $this->validated($request);
 
+        if ($request->hasFile('image_file')) {
+            $path = $request->file('image_file')->store('products', 'public');
+            $data['image'] = '/storage/'.$path;
+        }
+        unset($data['image_file']);
+
         $product = Product::create($data);
         $this->syncVariants($request, $product);
 
         return redirect()->route('admin.products.edit', $product)
-            ->with('success', 'Product created.');
+            ->with('success', 'Produk berhasil dibuat.');
     }
 
     public function edit(Product $product)
@@ -63,11 +70,23 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product): RedirectResponse
     {
-        $product->update($this->validated($request, $product));
+        $data = $this->validated($request, $product);
+
+        if ($request->hasFile('image_file')) {
+            if ($product->image && str_starts_with($product->image, '/storage/products/')) {
+                $oldPath = str_replace('/storage/', '', $product->image);
+                Storage::disk('public')->delete($oldPath);
+            }
+            $path = $request->file('image_file')->store('products', 'public');
+            $data['image'] = '/storage/'.$path;
+        }
+        unset($data['image_file']);
+
+        $product->update($data);
         $this->syncVariants($request, $product);
 
         return redirect()->route('admin.products.index')
-            ->with('success', 'Product updated.');
+            ->with('success', 'Produk berhasil diperbarui.');
     }
 
     public function destroy(Product $product): RedirectResponse
@@ -77,16 +96,23 @@ class ProductController extends Controller
             return back()->with('error', 'Produk tidak dapat dihapus karena sudah memiliki riwayat transaksi pemesanan. Ubah status menjadi archived.');
         }
 
+        if ($product->image && str_starts_with($product->image, '/storage/products/')) {
+            $oldPath = str_replace('/storage/', '', $product->image);
+            Storage::disk('public')->delete($oldPath);
+        }
+
         $product->variants()->delete();
         $product->delete();
 
         return redirect()->route('admin.products.index')
-            ->with('success', 'Product deleted.');
+            ->with('success', 'Produk berhasil dihapus.');
     }
 
     protected function validated(Request $request, ?Product $product = null): array
     {
-        if ($request->filled('slug')) {
+        if (! $request->filled('slug') && $request->filled('name')) {
+            $request->merge(['slug' => Str::slug((string) $request->input('name'))]);
+        } elseif ($request->filled('slug')) {
             $request->merge(['slug' => Str::slug((string) $request->input('slug'))]);
         }
 
@@ -99,6 +125,7 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'image' => 'nullable|string|max:500',
+            'image_file' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
             'tag' => 'nullable|string|max:50',
             'kind' => 'nullable|string|max:30',
             'sizes' => 'nullable|array',
