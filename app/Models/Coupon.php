@@ -31,6 +31,11 @@ class Coupon extends Model
         'is_active' => 'boolean',
     ];
 
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function isValid(float $subtotal): bool
     {
         return $this->is_active

@@ -36,6 +36,10 @@ class UserController extends Controller
             return back()->with('error', 'Kamu tidak bisa menurunkan role akunmu sendiri.');
         }
 
+        if ($data['role'] !== User::ROLE_ADMIN && User::where('role', User::ROLE_ADMIN)->count() <= 1) {
+            return back()->with('error', 'Sistem harus memiliki setidaknya satu admin aktif.');
+        }
+
         $user->update(['role' => $data['role']]);
 
         return back()->with('success', 'Role updated.');

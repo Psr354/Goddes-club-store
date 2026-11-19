@@ -46,6 +46,10 @@ class CouponController extends Controller
 
     public function destroy(Coupon $coupon): RedirectResponse
     {
+        if ($coupon->orders()->exists()) {
+            return back()->with('error', 'Kupon tidak dapat dihapus karena telah digunakan pada riwayat pesanan. Nonaktifkan kupon ini.');
+        }
+
         $coupon->delete();
 
         return redirect()->route('admin.coupons.index')->with('success', 'Coupon deleted.');

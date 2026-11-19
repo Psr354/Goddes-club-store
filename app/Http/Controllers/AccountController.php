@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AccountController extends Controller
 {
@@ -80,21 +81,23 @@ class AccountController extends Controller
             'is_primary' => 'nullable|boolean',
         ]);
 
-        $isPrimary = $request->boolean('is_primary') || ! $user->addresses()->exists();
+        DB::transaction(function () use ($user, $validated, $request) {
+            $isPrimary = $request->boolean('is_primary') || ! $user->addresses()->exists();
 
-        if ($isPrimary) {
-            $user->addresses()->update(['is_primary' => false]);
-        }
+            if ($isPrimary) {
+                $user->addresses()->update(['is_primary' => false]);
+            }
 
-        $user->addresses()->create([
-            'recipient_name' => $validated['recipient_name'],
-            'phone' => $validated['phone'],
-            'full_address' => $validated['full_address'],
-            'postal_code' => $validated['postal_code'],
-            'city_id' => $validated['city_id'] ?? 0,
-            'district_id' => 0,
-            'is_primary' => $isPrimary,
-        ]);
+            $user->addresses()->create([
+                'recipient_name' => $validated['recipient_name'],
+                'phone' => $validated['phone'],
+                'full_address' => $validated['full_address'],
+                'postal_code' => $validated['postal_code'],
+                'city_id' => $validated['city_id'] ?? 0,
+                'district_id' => 0,
+                'is_primary' => $isPrimary,
+            ]);
+        });
 
         return back()->with('account_notice', 'Alamat pengiriman baru berhasil disimpan.');
     }
@@ -113,12 +116,14 @@ class AccountController extends Controller
             return back()->with('error', 'Alamat tidak dapat dihapus karena tercatat dalam riwayat pesanan.');
         }
 
-        $wasPrimary = (bool) $address->is_primary;
-        $address->delete();
+        DB::transaction(function () use ($user, $address) {
+            $wasPrimary = (bool) $address->is_primary;
+            $address->delete();
 
-        if ($wasPrimary) {
-            $user->addresses()->latest('id')->first()?->update(['is_primary' => true]);
-        }
+            if ($wasPrimary) {
+                $user->addresses()->latest('id')->first()?->update(['is_primary' => true]);
+            }
+        });
 
         return back()->with('account_notice', 'Alamat pengiriman berhasil dihapus.');
     }

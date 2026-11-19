@@ -86,6 +86,10 @@ class ProductController extends Controller
 
     protected function validated(Request $request, ?Product $product = null): array
     {
+        if ($request->filled('slug')) {
+            $request->merge(['slug' => Str::slug((string) $request->input('slug'))]);
+        }
+
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
@@ -105,8 +109,6 @@ class ProductController extends Controller
             'variant_stocks.*' => 'nullable|integer|min:0',
             'weight_gram' => 'nullable|integer|min:1|max:100000',
         ]);
-
-        $data['slug'] = Str::slug($data['slug']);
 
         return $data;
     }

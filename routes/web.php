@@ -71,12 +71,12 @@ Route::middleware('auth')->group(function () {
 */
 
 Route::get('/api/cart', [CartController::class, 'index']);
-Route::post('/api/cart', [CartController::class, 'add']);
-Route::post('/api/cart/update', [CartController::class, 'update']);
-Route::post('/api/cart/remove', [CartController::class, 'remove']);
+Route::post('/api/cart', [CartController::class, 'add'])->middleware('throttle:60,1');
+Route::post('/api/cart/update', [CartController::class, 'update'])->middleware('throttle:60,1');
+Route::post('/api/cart/remove', [CartController::class, 'remove'])->middleware('throttle:60,1');
 Route::post('/api/cart/promo', [CartController::class, 'promo'])->middleware('throttle:10,1');
 
-Route::post('/api/wishlist/toggle', [AccountController::class, 'toggleWishlist']);
+Route::post('/api/wishlist/toggle', [AccountController::class, 'toggleWishlist'])->middleware('throttle:30,1');
 
 Route::get('/api/shipping/calculate', function (Request $request) {
     $postal = $request->input('postal', '12160');
