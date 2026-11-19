@@ -130,15 +130,11 @@ class AccountController extends Controller
             ], 401);
         }
 
-        $productId = $request->input('product_id');
-        $product = Product::find($productId);
+        $validated = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+        ]);
 
-        if (! $product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Produk tidak ditemukan.',
-            ], 404);
-        }
+        $product = Product::findOrFail($validated['product_id']);
 
         $existing = Wishlist::where('user_id', $user->id)
             ->where('product_id', $product->id)

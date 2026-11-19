@@ -56,12 +56,17 @@ class CouponController extends Controller
         $data = $request->validate([
             'code' => 'required|string|max:50|unique:coupons,code'.($coupon ? ','.$coupon->id : ''),
             'type' => 'required|in:percentage,fixed',
-            'value' => 'required|numeric|min:0',
+            'value' => [
+                'required',
+                'numeric',
+                'min:0',
+                $request->input('type') === 'percentage' ? 'max:100' : 'nullable',
+            ],
             'min_order_amount' => 'nullable|numeric|min:0',
             'max_discount_amount' => 'nullable|numeric|min:0',
             'usage_limit' => 'nullable|integer|min:0',
             'starts_at' => 'nullable|date',
-            'expires_at' => 'nullable|date|after:starts_at',
+            'expires_at' => 'nullable|date'.($request->filled('starts_at') ? '|after:starts_at' : ''),
             'is_active' => 'nullable|boolean',
         ]);
 

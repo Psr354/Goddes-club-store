@@ -66,7 +66,7 @@ class TrackController extends Controller
     {
         $reference = strtoupper($reference);
 
-        $order = Order::with(['items', 'trackings', 'address'])
+        $order = Order::with('trackings')
             ->whereRaw('UPPER(invoice_number) = ?', [$reference])
             ->first();
 
@@ -76,7 +76,7 @@ class TrackController extends Controller
 
         if (auth()->check() && preg_match('/^GC-?(\d+)$/', $reference, $matches)) {
             $user = auth()->user();
-            $query = Order::with(['items', 'trackings', 'address'])->where('id', (int) $matches[1]);
+            $query = Order::with('trackings')->where('id', (int) $matches[1]);
 
             if (! $user->isAdmin()) {
                 $query->where('user_id', $user->id);
