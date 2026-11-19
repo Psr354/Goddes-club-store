@@ -102,7 +102,6 @@
 
           <div class="login-password-label">
             <label for="auth-password">Password</label>
-            <a href="{{ Route::has('password.request') ? route('password.request') : url('/forgot-password') }}" id="forgot-btn" style="color:#e5a93b;font-size:11px;text-decoration:none;">Lupa password? &nearr;</a>
           </div>
 
           <div class="login-password">
@@ -110,7 +109,11 @@
             <button type="button" id="toggle-pw-btn" aria-controls="auth-password" aria-pressed="false" onclick="togglePasswordVisibility()">LIHAT</button>
           </div>
 
-          <button class="primary login-submit" type="submit">
+          <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+            <a href="{{ Route::has('password.request') ? route('password.request') : url('/forgot-password') }}" id="forgot-btn" style="color:#e5a93b; font-size:11px; text-decoration:none;">Lupa password? &nearr;</a>
+          </div>
+
+          <button class="primary login-submit" type="submit" style="margin-top:16px;">
             MASUK KE DEMO <span>↗</span>
           </button>
 
