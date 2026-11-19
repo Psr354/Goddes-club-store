@@ -50,7 +50,7 @@
           </div>
         @endif
 
-        <form method="POST" action="{{ route('password.email') }}" id="forgot-form">
+        <form method="POST" action="{{ Route::has('password.email') ? route('password.email') : url('/forgot-password') }}" id="forgot-form">
           @csrf
 
           <label for="recovery-email">Alamat email

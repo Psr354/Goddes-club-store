@@ -102,7 +102,7 @@
 
           <div class="login-password-label">
             <label for="auth-password">Password</label>
-            <a href="{{ route('password.request') }}" id="forgot-btn" style="color:#e5a93b;font-size:11px;text-decoration:none;">Lupa password? &nearr;</a>
+            <a href="{{ Route::has('password.request') ? route('password.request') : url('/forgot-password') }}" id="forgot-btn" style="color:#e5a93b;font-size:11px;text-decoration:none;">Lupa password? &nearr;</a>
           </div>
 
           <div class="login-password">

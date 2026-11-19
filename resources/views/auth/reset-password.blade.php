@@ -44,7 +44,7 @@
           </div>
         @endif
 
-        <form method="POST" action="{{ route('password.update') }}" id="reset-form">
+        <form method="POST" action="{{ Route::has('password.update') ? route('password.update') : url('/reset-password') }}" id="reset-form">
           @csrf
           <input type="hidden" name="token" value="{{ $token }}">
 
