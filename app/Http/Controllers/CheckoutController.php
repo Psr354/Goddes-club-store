@@ -261,8 +261,11 @@ class CheckoutController extends Controller
 
             DB::transaction(function () use ($order) {
                 $order->update(['status' => 'cancelled']);
-                if ($order->coupon) {
-                    $order->coupon->decrement('used_count');
+                if ($order->coupon_id) {
+                    $coupon = $order->coupon()->lockForUpdate()->first();
+                    if ($coupon && $coupon->used_count > 0) {
+                        $coupon->decrement('used_count');
+                    }
                 }
                 foreach ($order->items as $item) {
                     $variant = ProductVariant::where('id', $item->product_variant_id)->lockForUpdate()->first();
