@@ -32,25 +32,21 @@ class DatabaseSeeder extends Seeder
      */
     protected function seedUsers(): void
     {
-        User::updateOrCreate(
-            ['email' => 'admin@example.com'],
-            [
-                'name' => 'Store Admin',
-                'password' => 'Admin123',
-                'role' => User::ROLE_ADMIN,
-                'email_verified_at' => now(),
-            ]
-        );
+        $admin = User::firstOrNew(['email' => 'admin@example.com']);
+        $admin->forceFill([
+            'name' => 'Store Admin',
+            'password' => 'Admin123',
+            'role' => User::ROLE_ADMIN,
+            'email_verified_at' => now(),
+        ])->save();
 
-        User::updateOrCreate(
-            ['email' => 'demo@example.com'],
-            [
-                'name' => 'Demo Customer',
-                'password' => 'Goddess123',
-                'role' => User::ROLE_CUSTOMER,
-                'email_verified_at' => now(),
-            ]
-        );
+        $demo = User::firstOrNew(['email' => 'demo@example.com']);
+        $demo->forceFill([
+            'name' => 'Demo Customer',
+            'password' => 'Goddess123',
+            'role' => User::ROLE_CUSTOMER,
+            'email_verified_at' => now(),
+        ])->save();
     }
 
     protected function seedCoupons(): void

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Payment;
+use App\Models\ProductVariant;
 use App\Notifications\ShippingDispatched;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,31 +69,66 @@ class OrderController extends Controller
         }
 
         DB::transaction(function () use ($order, $data, $status, $previousStatus) {
-            $order->update([
+            $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->firstOrFail();
+
+            $lockedOrder->update([
                 'status' => $status,
-                'courier_code' => $data['courier_code'] ?? $order->courier_code,
-                'tracking_number' => $data['tracking_number'] ?? $order->tracking_number,
+                'courier_code' => $data['courier_code'] ?? $lockedOrder->courier_code,
+                'tracking_number' => $data['tracking_number'] ?? $lockedOrder->tracking_number,
             ]);
 
             if ($status !== $previousStatus) {
-                if ($status === 'cancelled') {
-                    if ($order->coupon_id) {
-                        $coupon = $order->coupon()->lockForUpdate()->first();
+                if ($status === 'paid' && $previousStatus === 'pending_payment') {
+                    // Update Payment record
+                    $payment = $lockedOrder->payment ?? Payment::firstOrNew(['order_id' => $lockedOrder->id]);
+                    $payment->status = 'paid';
+                    $payment->paid_at = now();
+                    $payment->payment_method = $payment->payment_method ?: 'manual_admin';
+                    $payment->save();
+
+                    // Deduct physical stock and release reserved stock
+                    foreach ($lockedOrder->items as $item) {
+                        $variant = ProductVariant::where('id', $item->product_variant_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($variant) {
+                            $variant->decrement('stock', $item->quantity);
+                            $variant->decrement('reserved_stock', min($variant->reserved_stock, $item->quantity));
+
+                            if ($variant->product) {
+                                $variant->product->decrement('stock', $item->quantity);
+                            }
+                        }
+                    }
+                } elseif ($status === 'cancelled') {
+                    if ($lockedOrder->coupon_id) {
+                        $coupon = $lockedOrder->coupon()->lockForUpdate()->first();
                         if ($coupon && $coupon->used_count > 0) {
                             $coupon->decrement('used_count');
                         }
                     }
 
+                    if ($lockedOrder->payment && $lockedOrder->payment->status !== 'paid') {
+                        $lockedOrder->payment->update(['status' => 'failed']);
+                    }
+
                     if ($previousStatus === 'pending_payment') {
-                        foreach ($order->items as $item) {
-                            $variant = $item->variant()->lockForUpdate()->first();
+                        foreach ($lockedOrder->items as $item) {
+                            $variant = ProductVariant::where('id', $item->product_variant_id)
+                                ->lockForUpdate()
+                                ->first();
+
                             if ($variant) {
                                 $variant->decrement('reserved_stock', min($variant->reserved_stock, $item->quantity));
                             }
                         }
                     } elseif (in_array($previousStatus, ['paid', 'processing', 'shipped'])) {
-                        foreach ($order->items as $item) {
-                            $variant = $item->variant()->lockForUpdate()->first();
+                        foreach ($lockedOrder->items as $item) {
+                            $variant = ProductVariant::where('id', $item->product_variant_id)
+                                ->lockForUpdate()
+                                ->first();
+
                             if ($variant) {
                                 $variant->increment('stock', $item->quantity);
                                 if ($variant->product) {
@@ -102,15 +139,15 @@ class OrderController extends Controller
                     }
                 }
 
-                $order->trackings()->create([
+                $lockedOrder->trackings()->create([
                     'status' => $status,
                     'description' => 'Order status updated to '.str_replace('_', ' ', $status).'.',
                     'occurred_at' => now(),
                 ]);
 
-                if ($status === 'shipped' && $order->user) {
+                if ($status === 'shipped' && $lockedOrder->user) {
                     try {
-                        $order->user->notify(new ShippingDispatched($order));
+                        $lockedOrder->user->notify(new ShippingDispatched($lockedOrder));
                     } catch (\Throwable $e) {
                         report($e);
                     }

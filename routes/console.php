@@ -19,21 +19,29 @@ Artisan::command('orders:expire', function () {
         ->with(['items.variant', 'coupon', 'payment'])
         ->chunkById(100, function ($expiredOrders) use (&$count) {
             foreach ($expiredOrders as $order) {
-                DB::transaction(function () use ($order) {
-                    $order->update(['status' => 'cancelled']);
+                DB::transaction(function () use ($order, &$count) {
+                    $lockedOrder = Order::where('id', $order->id)
+                        ->lockForUpdate()
+                        ->first();
 
-                    if ($order->payment) {
-                        $order->payment->update(['status' => 'failed']);
+                    if (! $lockedOrder || $lockedOrder->status !== 'pending_payment') {
+                        return;
                     }
 
-                    if ($order->coupon_id) {
-                        $coupon = $order->coupon()->lockForUpdate()->first();
+                    $lockedOrder->update(['status' => 'cancelled']);
+
+                    if ($lockedOrder->payment) {
+                        $lockedOrder->payment->update(['status' => 'failed']);
+                    }
+
+                    if ($lockedOrder->coupon_id) {
+                        $coupon = $lockedOrder->coupon()->lockForUpdate()->first();
                         if ($coupon && $coupon->used_count > 0) {
                             $coupon->decrement('used_count');
                         }
                     }
 
-                    foreach ($order->items as $item) {
+                    foreach ($lockedOrder->items as $item) {
                         $variant = ProductVariant::where('id', $item->product_variant_id)
                             ->lockForUpdate()
                             ->first();
@@ -42,13 +50,14 @@ Artisan::command('orders:expire', function () {
                         }
                     }
 
-                    $order->trackings()->create([
+                    $lockedOrder->trackings()->create([
                         'status' => 'cancelled',
                         'description' => 'Pesanan dibatalkan otomatis karena melewati batas waktu pembayaran.',
                         'occurred_at' => now(),
                     ]);
+
+                    $count++;
                 });
-                $count++;
             }
         });
 

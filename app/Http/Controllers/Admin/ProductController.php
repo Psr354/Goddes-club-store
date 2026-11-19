@@ -125,7 +125,7 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'image' => 'nullable|string|max:500',
-            'image_file' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'image_file' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:5120',
             'tag' => 'nullable|string|max:50',
             'kind' => 'nullable|string|max:30',
             'sizes' => 'nullable|array',

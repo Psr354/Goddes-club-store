@@ -78,12 +78,12 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $user = User::create([
+        $user = new User([
             'name' => $request->name,
             'email' => $request->email,
             'password' => $request->password,
-            'role' => User::ROLE_CUSTOMER,
         ]);
+        $user->forceFill(['role' => User::ROLE_CUSTOMER])->save();
 
         Auth::login($user);
 
@@ -118,13 +118,9 @@ class AuthController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        $status = Password::sendResetLink($request->only('email'));
+        Password::sendResetLink($request->only('email'));
 
-        if ($status === Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
-        }
-
-        return back()->withErrors(['email' => __($status)]);
+        return back()->with('status', 'Jika alamat email terdaftar, tautan pengaturan ulang kata sandi telah dikirimkan.');
     }
 
     public function showResetPassword(Request $request, string $token)
