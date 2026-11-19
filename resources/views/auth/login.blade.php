@@ -70,12 +70,12 @@
       <!-- Right side: Backstage pass login form -->
       <section class="login-form-panel" aria-labelledby="login-title">
         <div class="login-preview">
-          PROTOTIPE UI <span>Belum terhubung ke autentikasi</span>
+          AKUN RESMI <span>Autentikasi Server Aktif</span>
         </div>
 
         <div class="eyebrow muted">YOUR BACKSTAGE PASS</div>
         <h2 id="login-title">Welcome <em>back.</em></h2>
-        <p class="login-description">Masuk ke sudut kecilmu di Goddess Club.</p>
+        <p class="login-description">Masuk ke akun Goddess Club Store Anda.</p>
 
         @if ($errors->any())
           <div class="login-message" role="status" style="border-color: #d92323; background: #2a1717; color: #fca5a5; margin-bottom: 20px;">
@@ -90,7 +90,7 @@
         @endif
 
         <div id="reset-sim-alert" class="login-message" role="status" style="display:none; border-color: #e5a93b; color: #fde68a;">
-          Simulasi saja: email reset tidak dikirim. Pemulihan password akan dihubungkan saat backend Laravel tersedia.
+          Silakan gunakan fitur lupa password untuk mengatur ulang kata sandi Anda.
         </div>
 
         <form method="POST" action="{{ route('login') }}" id="login-form">
@@ -105,7 +105,7 @@
           </div>
 
           <div class="login-password">
-            <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Minimal 8 karakter" aria-describedby="auth-demo-note" value="Goddess123">
+            <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Masukkan kata sandi">
             <button type="button" id="toggle-pw-btn" aria-controls="auth-password" aria-pressed="false" onclick="togglePasswordVisibility()">LIHAT</button>
           </div>
 
@@ -114,25 +114,25 @@
           </div>
 
           <button class="primary login-submit" type="submit" style="margin-top:16px;">
-            MASUK KE DEMO <span>↗</span>
+            MASUK KE AKUN <span>&nearr;</span>
           </button>
 
           <p id="auth-demo-note" class="login-demo-note">
-            Gunakan email dan password contoh, bukan kredensial asli. Tidak ada akun dibuat atau password disimpan. Sesi demo berakhir saat halaman dimuat ulang.
+            Masuk dengan akun terdaftar Anda, atau klik salah satu kartu akun demo di bawah untuk menguji sistem secara instan.
           </p>
         </form>
 
         <div class="login-switch">
-          Belum punya akun? <a href="{{ route('register') }}">Daftar sekarang ↗</a>
+          Belum punya akun? <a href="{{ route('register') }}">Daftar sekarang &nearr;</a>
         </div>
 
         <div class="login-message">
-          <strong>Satu login, dua dashboard demo</strong>
-          <p>Role ditentukan oleh akun contoh, bukan pilihan pada form.</p>
+          <strong>Pilihan Akun Demo</strong>
+          <p>Klik kotak di bawah untuk mengisi form login secara otomatis:</p>
 
           <div class="demo-account-row" onclick="fillDemo('demo@example.com', 'Goddess123')" title="Klik untuk otomatis mengisi">
             <p style="margin:0;">
-              <strong>User:</strong> demo@example.com<br>
+              <strong>User / Customer:</strong> demo@example.com<br>
               Password: <code>Goddess123</code>
               <small style="color: #e5a93b; font-size: 10px; margin-left: 6px;">(klik untuk isi)</small>
             </p>
@@ -140,15 +140,11 @@
 
           <div class="demo-account-row" onclick="fillDemo('admin@example.com', 'Admin123')" title="Klik untuk otomatis mengisi">
             <p style="margin:0;">
-              <strong>Admin:</strong> admin@example.com<br>
+              <strong>Admin Toko:</strong> admin@example.com<br>
               Password: <code>Admin123</code>
               <small style="color: #e5a93b; font-size: 10px; margin-left: 6px;">(klik untuk isi)</small>
             </p>
           </div>
-
-          <p style="margin-top: 10px; margin-bottom: 0;">
-            Pendaftaran demo selalu masuk sebagai user. Ini bukan otorisasi aman; role produksi harus diverifikasi di server Laravel.
-          </p>
         </div>
 
         <div class="login-panel-footer">FOR THE MUSIC. FOR THE MEMORIES. FOR YOU.</div>

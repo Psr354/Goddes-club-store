@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -29,11 +30,25 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
+        $throttleKey = Str::transliterate(Str::lower($request->input('email')).'|'.$request->ip());
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            throw ValidationException::withMessages([
+                'email' => "Terlalu banyak percobaan masuk. Silakan tunggu {$seconds} detik sebelum mencoba lagi.",
+            ]);
+        }
+
         if (! Auth::attempt(['email' => $request->email, 'password' => $request->password], $request->boolean('remember'))) {
+            RateLimiter::hit($throttleKey, 60);
+
             throw ValidationException::withMessages([
                 'email' => 'Email atau password tidak cocok.',
             ]);
         }
+
+        RateLimiter::clear($throttleKey);
 
         $user = Auth::user();
         if ($user) {
@@ -43,7 +58,7 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         return $this->redirectAfterAuth()
-            ->with('success', 'Welcome back to the club!');
+            ->with('success', 'Selamat datang kembali!');
     }
 
     public function showRegister()

@@ -79,4 +79,29 @@ class AuthTest extends TestCase
         $response = $this->actingAs($admin)->get('/admin');
         $response->assertStatus(200);
     }
+
+    public function test_login_fails_with_invalid_credentials_and_rate_limits(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'login_ratelimit@test.com',
+            'password' => 'CorrectPassword123',
+        ]);
+
+        // 5 wrong attempts
+        for ($i = 0; $i < 5; $i++) {
+            $response = $this->post('/login', [
+                'email' => 'login_ratelimit@test.com',
+                'password' => 'WrongPassword',
+            ]);
+            $response->assertSessionHasErrors('email');
+        }
+
+        // 6th attempt should be rate limited with friendly validation message
+        $response = $this->post('/login', [
+            'email' => 'login_ratelimit@test.com',
+            'password' => 'WrongPassword',
+        ]);
+        $response->assertSessionHasErrors(['email']);
+        $this->assertStringContainsString('Terlalu banyak percobaan', session('errors')->first('email'));
+    }
 }
