@@ -88,7 +88,7 @@ Route::get('/api/shipping/calculate', function (Request $request) {
         'calculated' => ShippingCalculator::calculate($postal, $weight, $courier),
         'available' => ShippingCalculator::availableOptions($postal, $weight),
     ]);
-});
+})->middleware('throttle:30,1');
 
 Route::post('/api/checkout', [CheckoutController::class, 'process'])->middleware('throttle:5,1');
 Route::post('/api/payment/webhook', [PaymentWebhookController::class, 'handle'])->name('payment.webhook');

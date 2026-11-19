@@ -13,6 +13,15 @@ class OrderController extends Controller
 {
     public const STATUSES = ['pending_payment', 'paid', 'processing', 'shipped', 'completed', 'cancelled'];
 
+    public const VALID_TRANSITIONS = [
+        'pending_payment' => ['paid', 'cancelled'],
+        'paid' => ['processing', 'cancelled'],
+        'processing' => ['shipped', 'cancelled'],
+        'shipped' => ['completed', 'cancelled'],
+        'completed' => [],
+        'cancelled' => [],
+    ];
+
     public function index(Request $request)
     {
         $orders = Order::with('user')
@@ -53,6 +62,10 @@ class OrderController extends Controller
         $status = $data['status'];
         $previousStatus = $order->status;
 
+        if ($status !== $previousStatus && ! in_array($status, self::VALID_TRANSITIONS[$previousStatus] ?? [], true)) {
+            return back()->with('error', "Perubahan status dari '".str_replace('_', ' ', $previousStatus)."' ke '".str_replace('_', ' ', $status)."' tidak diizinkan.");
+        }
+
         DB::transaction(function () use ($order, $data, $status, $previousStatus) {
             $order->update([
                 'status' => $status,
@@ -62,20 +75,21 @@ class OrderController extends Controller
 
             if ($status !== $previousStatus) {
                 if ($status === 'cancelled') {
-                    if ($previousStatus === 'pending_payment') {
-                        if ($order->coupon_id) {
-                            $coupon = $order->coupon()->lockForUpdate()->first();
-                            if ($coupon && $coupon->used_count > 0) {
-                                $coupon->decrement('used_count');
-                            }
+                    if ($order->coupon_id) {
+                        $coupon = $order->coupon()->lockForUpdate()->first();
+                        if ($coupon && $coupon->used_count > 0) {
+                            $coupon->decrement('used_count');
                         }
+                    }
+
+                    if ($previousStatus === 'pending_payment') {
                         foreach ($order->items as $item) {
                             $variant = $item->variant()->lockForUpdate()->first();
                             if ($variant) {
                                 $variant->decrement('reserved_stock', min($variant->reserved_stock, $item->quantity));
                             }
                         }
-                    } elseif (in_array($previousStatus, ['paid', 'processing'])) {
+                    } elseif (in_array($previousStatus, ['paid', 'processing', 'shipped'])) {
                         foreach ($order->items as $item) {
                             $variant = $item->variant()->lockForUpdate()->first();
                             if ($variant) {

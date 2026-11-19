@@ -220,10 +220,19 @@ class CartController extends Controller
 
     protected function sessionItems(Request $request): Collection
     {
-        $rows = $request->session()->get($this->sessionKey($request), []);
+        $rows = collect($request->session()->get($this->sessionKey($request), []));
+        if ($rows->isEmpty()) {
+            return collect();
+        }
 
-        return collect($rows)->map(function (array $row) {
-            $variant = ProductVariant::with('product.category')->find($row['product_variant_id']);
+        $variantIds = $rows->pluck('product_variant_id')->filter()->all();
+        $variants = ProductVariant::with('product.category')
+            ->whereIn('id', $variantIds)
+            ->get()
+            ->keyBy('id');
+
+        return $rows->map(function (array $row) use ($variants) {
+            $variant = $variants->get($row['product_variant_id']);
 
             return [
                 'variant' => $variant,
@@ -312,8 +321,13 @@ class CartController extends Controller
             $quantity = (int) ($row['quantity'] ?? 0);
 
             if ($variantId > 0 && $quantity > 0) {
+                $variant = ProductVariant::with('product')->find($variantId);
+                if (! $variant || $variant->product?->status !== 'active') {
+                    continue;
+                }
+
                 $item = $cart->items()->firstOrNew(['product_variant_id' => $variantId]);
-                $item->quantity = ($item->exists ? $item->quantity : 0) + $quantity;
+                $item->quantity = min(99, ($item->exists ? $item->quantity : 0) + $quantity);
                 $item->save();
             }
         }
