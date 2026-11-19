@@ -78,7 +78,7 @@ class TrackController extends Controller
             $user = auth()->user();
             $query = Order::with(['items', 'trackings', 'address'])->where('id', (int) $matches[1]);
 
-            if (! $user->is_admin) {
+            if (! $user->isAdmin()) {
                 $query->where('user_id', $user->id);
             }
 

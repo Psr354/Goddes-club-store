@@ -42,20 +42,27 @@ Route::get('/track', [TrackController::class, 'show'])->name('track');
 */
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:3,1');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
+Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email')->middleware('throttle:3,1');
+Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update')->middleware('throttle:5,1');
 
 /*
 |--------------------------------------------------------------------------
 | User Account / My Club Dashboard
 |--------------------------------------------------------------------------
 */
-Route::get('/account', [AccountController::class, 'index'])->name('account');
-Route::post('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile');
-Route::post('/account/address', [AccountController::class, 'storeAddress'])->name('account.address.store');
-Route::delete('/account/address/{address}', [AccountController::class, 'destroyAddress'])->name('account.address.destroy');
+Route::middleware('auth')->group(function () {
+    Route::get('/account', [AccountController::class, 'index'])->name('account');
+    Route::post('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile');
+    Route::post('/account/address', [AccountController::class, 'storeAddress'])->name('account.address.store');
+    Route::delete('/account/address/{address}', [AccountController::class, 'destroyAddress'])->name('account.address.destroy');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -67,7 +74,7 @@ Route::get('/api/cart', [CartController::class, 'index']);
 Route::post('/api/cart', [CartController::class, 'add']);
 Route::post('/api/cart/update', [CartController::class, 'update']);
 Route::post('/api/cart/remove', [CartController::class, 'remove']);
-Route::post('/api/cart/promo', [CartController::class, 'promo']);
+Route::post('/api/cart/promo', [CartController::class, 'promo'])->middleware('throttle:10,1');
 
 Route::post('/api/wishlist/toggle', [AccountController::class, 'toggleWishlist']);
 
@@ -83,14 +90,14 @@ Route::get('/api/shipping/calculate', function (Request $request) {
     ]);
 });
 
-Route::post('/api/checkout', [CheckoutController::class, 'process']);
+Route::post('/api/checkout', [CheckoutController::class, 'process'])->middleware('throttle:5,1');
 Route::post('/api/payment/webhook', [PaymentWebhookController::class, 'handle'])->name('payment.webhook');
 
 if (app()->environment('local', 'testing')) {
     Route::post('/api/payment/simulate', [PaymentWebhookController::class, 'simulate'])->name('payment.simulate');
 }
 
-Route::post('/api/track', [TrackController::class, 'api']);
+Route::post('/api/track', [TrackController::class, 'api'])->middleware('throttle:30,1');
 
 /*
 |--------------------------------------------------------------------------

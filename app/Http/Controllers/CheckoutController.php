@@ -58,45 +58,20 @@ class CheckoutController extends Controller
             ], 422);
         }
 
-        // Calculate total weight and base subtotal
-        $totalWeight = (int) $cart->items->sum(
-            fn ($item) => (int) ($item->variant->weight_gram ?: 300) * $item->quantity
-        );
-
-        $subtotal = (float) $cart->items->sum(
-            fn ($item) => (float) $item->variant->price * $item->quantity
-        );
-
-        // Calculate dynamic shipping fee using ShippingCalculator
         $courier = $data['courier_code'] ?? 'JNE';
-        $shippingCalculation = ShippingCalculator::calculate(
-            destinationPostal: $data['postal_code'],
-            weightGram: $totalWeight,
-            courier: $courier
-        );
-        $shippingFee = $shippingCalculation['fee'] ?? self::DEFAULT_SHIPPING_FEE;
-
-        // Coupon calculation
-        $coupon = null;
-        $discount = 0.0;
-
-        if (! empty($data['coupon_code'])) {
-            $coupon = Coupon::where('code', strtoupper(trim($data['coupon_code'])))->first();
-
-            if ($coupon && $coupon->isValid($subtotal)) {
-                $discount = (float) $coupon->calculateDiscount($subtotal);
-            } else {
-                $coupon = null;
-            }
-        }
-
-        $grandTotal = max(0, $subtotal - $discount + $shippingFee);
+        $couponCode = ! empty($data['coupon_code']) ? strtoupper(trim($data['coupon_code'])) : null;
 
         try {
-            $order = DB::transaction(function () use ($user, $data, $cart, $subtotal, $discount, $coupon, $shippingFee, $grandTotal, $courier) {
-                // 1. Check and lock stock for each variant using lockForUpdate()
-                foreach ($cart->items as $item) {
+            $order = DB::transaction(function () use ($user, $data, $cart, $courier, $couponCode) {
+                // 1. Check and lock stock for each variant deterministically sorted by ID to prevent deadlocks
+                $totalWeight = 0;
+                $subtotal = 0.0;
+
+                $sortedItems = $cart->items->sortBy('product_variant_id');
+
+                foreach ($sortedItems as $item) {
                     $variant = ProductVariant::where('id', $item->product_variant_id)
+                        ->with('product')
                         ->lockForUpdate()
                         ->first();
 
@@ -104,23 +79,58 @@ class CheckoutController extends Controller
                         throw new \RuntimeException('Varian produk tidak ditemukan.');
                     }
 
+                    if ($variant->product?->status !== 'active') {
+                        throw new \RuntimeException("Produk '{$variant->product?->name}' sudah tidak aktif atau tidak tersedia.");
+                    }
+
                     if ($variant->availableStock() < $item->quantity) {
-                        throw new \RuntimeException("Stok untuk '{$item->variant->product->name} ({$variant->size()})' tidak mencukupi. Tersedia: {$variant->availableStock()} pcs.");
+                        throw new \RuntimeException("Stok untuk '{$variant->product->name} ({$variant->size()})' tidak mencukupi. Tersedia: {$variant->availableStock()} pcs.");
                     }
 
                     // Increment reserved stock
                     $variant->increment('reserved_stock', $item->quantity);
+
+                    $weight = (int) ($variant->weight_gram ?: 300);
+                    $totalWeight += $weight * $item->quantity;
+                    $subtotal += (float) $variant->price * $item->quantity;
                 }
 
-                // 2. Save or update user address
-                $address = UserAddress::create([
+                // Dynamic shipping fee calculation
+                $shippingCalculation = ShippingCalculator::calculate(
+                    destinationPostal: $data['postal_code'],
+                    weightGram: $totalWeight,
+                    courier: $courier
+                );
+                $shippingFee = $shippingCalculation['fee'] ?? self::DEFAULT_SHIPPING_FEE;
+
+                // Coupon locking and calculation
+                $coupon = null;
+                $discount = 0.0;
+                if ($couponCode) {
+                    $coupon = Coupon::where('code', $couponCode)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $coupon || ! $coupon->isValid($subtotal)) {
+                        throw new \RuntimeException('Kupon promo tidak valid atau kuota telah habis.');
+                    }
+
+                    $discount = (float) $coupon->calculateDiscount($subtotal);
+                    $coupon->increment('used_count');
+                }
+
+                $grandTotal = max(0, $subtotal - $discount + $shippingFee);
+
+                // 2. Save or find user address
+                $address = UserAddress::firstOrCreate([
                     'user_id' => $user->id,
                     'recipient_name' => $data['recipient_name'],
                     'phone' => $data['phone'],
                     'full_address' => $data['full_address'],
+                    'postal_code' => $data['postal_code'],
+                ], [
                     'city_id' => $data['city_id'] ?? 0,
                     'district_id' => 0,
-                    'postal_code' => $data['postal_code'],
                     'is_primary' => ! $user->addresses()->exists(),
                 ]);
 
@@ -138,11 +148,6 @@ class CheckoutController extends Controller
                     'courier_code' => strtoupper($courier),
                     'tracking_number' => null,
                 ]);
-
-                // If coupon applied, increment used_count
-                if ($coupon) {
-                    $coupon->increment('used_count');
-                }
 
                 // 4. Create Order Items
                 foreach ($cart->items as $item) {
@@ -188,17 +193,89 @@ class CheckoutController extends Controller
             ], 422);
         }
 
-        $order->load(['items', 'address', 'payment', 'user']);
+        $order->load(['items', 'address', 'payment', 'user', 'coupon']);
+
+        // For free orders ($0 grand total, e.g. 100% discount promo), bypass payment gateway
+        if ($order->grand_total <= 0) {
+            DB::transaction(function () use ($order) {
+                $order->update(['status' => 'paid']);
+                $order->payment?->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                    'payment_method' => 'promo_free',
+                ]);
+
+                foreach ($order->items as $item) {
+                    $variant = ProductVariant::where('id', $item->product_variant_id)->lockForUpdate()->first();
+                    if ($variant) {
+                        $variant->decrement('stock', $item->quantity);
+                        $variant->decrement('reserved_stock', min($variant->reserved_stock, $item->quantity));
+                        $variant->product?->decrement('stock', $item->quantity);
+                    }
+                }
+
+                $order->trackings()->create([
+                    'status' => 'paid',
+                    'title' => 'Pesanan Gratis Dikonfirmasi',
+                    'description' => 'Pesanan berhasil dikonfirmasi tanpa biaya tambahan.',
+                    'occurred_at' => now(),
+                ]);
+            });
+
+            try {
+                $user->notify(new OrderConfirmed($order));
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pesanan berhasil dikonfirmasi.',
+                'invoice_number' => $order->invoice_number,
+                'reference' => $order->reference(),
+                'status' => 'paid',
+                'discount' => round($order->discount_amount, 2),
+                'shipping_fee' => round($order->shipping_fee, 2),
+                'grand_total' => 0.0,
+                'transaction_id' => $order->payment?->transaction_id,
+                'snap_token' => null,
+                'snap_url' => null,
+                'payment_url' => route('track', ['order' => $order->invoice_number]),
+                'track_url' => route('track', ['order' => $order->invoice_number]),
+            ]);
+        }
 
         // Generate Midtrans Snap transaction token
-        $snap = MidtransService::createTransaction($order);
-        if ($order->payment) {
-            $order->payment->update([
-                'provider' => 'midtrans',
-                'payment_method' => 'snap',
-                'provider_reference' => $snap['token'] ?? null,
-                'payment_url' => $snap['redirect_url'] ?? null,
-            ]);
+        try {
+            $snap = MidtransService::createTransaction($order);
+            if ($order->payment) {
+                $order->payment->update([
+                    'provider' => 'midtrans',
+                    'payment_method' => 'snap',
+                    'provider_reference' => $snap['token'] ?? null,
+                    'payment_url' => $snap['redirect_url'] ?? null,
+                ]);
+            }
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            DB::transaction(function () use ($order) {
+                $order->update(['status' => 'cancelled']);
+                if ($order->coupon) {
+                    $order->coupon->decrement('used_count');
+                }
+                foreach ($order->items as $item) {
+                    $variant = ProductVariant::where('id', $item->product_variant_id)->lockForUpdate()->first();
+                    if ($variant) {
+                        $variant->decrement('reserved_stock', min($variant->reserved_stock, $item->quantity));
+                    }
+                }
+            });
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menginisialisasi gateway pembayaran: '.$exception->getMessage(),
+            ], 502);
         }
 
         // Send order notification email via Mailpit queue
@@ -214,9 +291,9 @@ class CheckoutController extends Controller
             'invoice_number' => $order->invoice_number,
             'reference' => $order->reference(),
             'status' => $order->status,
-            'discount' => round($discount, 2),
-            'shipping_fee' => round($shippingFee, 2),
-            'grand_total' => round($grandTotal, 2),
+            'discount' => round($order->discount_amount, 2),
+            'shipping_fee' => round($order->shipping_fee, 2),
+            'grand_total' => round($order->grand_total, 2),
             'transaction_id' => $order->payment?->transaction_id,
             'snap_token' => $snap['token'],
             'snap_url' => $snap['redirect_url'],

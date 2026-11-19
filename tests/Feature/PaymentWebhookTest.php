@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\UserAddress;
 use App\Notifications\OrderConfirmed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -87,17 +88,26 @@ class PaymentWebhookTest extends TestCase
             'status' => 'pending',
             'amount' => 75.00,
         ]);
+
+        Config::set('services.midtrans.server_key', 'test-secret-key');
     }
 
     public function test_webhook_settlement_deducts_stock_and_marks_paid(): void
     {
         Notification::fake();
 
+        $orderId = 'GCS-TEST001';
+        $statusCode = '200';
+        $grossAmount = '75.00';
+        $signature = hash('sha512', $orderId.$statusCode.$grossAmount.'test-secret-key');
+
         $response = $this->postJson('/api/payment/webhook', [
-            'order_id' => 'GCS-TEST001',
+            'order_id' => $orderId,
+            'status_code' => $statusCode,
+            'gross_amount' => $grossAmount,
+            'signature_key' => $signature,
             'transaction_status' => 'settlement',
             'payment_type' => 'qris',
-            'gross_amount' => 75.00,
         ]);
 
         $response->assertStatus(200);
@@ -117,8 +127,16 @@ class PaymentWebhookTest extends TestCase
 
     public function test_webhook_expire_cancels_order_and_releases_reserved_stock(): void
     {
+        $orderId = 'GCS-TEST001';
+        $statusCode = '200';
+        $grossAmount = '75.00';
+        $signature = hash('sha512', $orderId.$statusCode.$grossAmount.'test-secret-key');
+
         $response = $this->postJson('/api/payment/webhook', [
-            'order_id' => 'GCS-TEST001',
+            'order_id' => $orderId,
+            'status_code' => $statusCode,
+            'gross_amount' => $grossAmount,
+            'signature_key' => $signature,
             'transaction_status' => 'expire',
         ]);
 

@@ -102,7 +102,7 @@
 
           <div class="login-password-label">
             <label for="auth-password">Password</label>
-            <button type="button" id="forgot-btn" onclick="toggleResetSimulation()">Lupa password?</button>
+            <a href="{{ route('password.request') }}" id="forgot-btn" style="color:#e5a93b;font-size:11px;text-decoration:none;">Lupa password? &nearr;</a>
           </div>
 
           <div class="login-password">

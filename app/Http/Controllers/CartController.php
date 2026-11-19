@@ -7,6 +7,7 @@ use App\Models\CartItem;
 use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -39,6 +40,14 @@ class CartController extends Controller
         ]);
 
         $product = Product::with('variants')->findOrFail($data['product_id']);
+
+        if ($product->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Produk ini tidak tersedia untuk dibeli.',
+            ], 422);
+        }
+
         $variant = $this->resolveVariant($product, $data['size'] ?? null);
 
         if (! $variant) {
@@ -50,7 +59,22 @@ class CartController extends Controller
 
         $quantity = (int) ($data['quantity'] ?? 1);
 
-        if ($variant->availableStock() < $quantity) {
+        $existingQty = 0;
+        if ($request->user()) {
+            $cart = $this->cart($request, false);
+            $existingItem = $cart?->items()->where('product_variant_id', $variant->id)->first();
+            $existingQty = $existingItem ? $existingItem->quantity : 0;
+        } else {
+            $rows = $request->session()->get($this->sessionKey($request), []);
+            foreach ($rows as $row) {
+                if ((int) $row['product_variant_id'] === $variant->id) {
+                    $existingQty = (int) $row['quantity'];
+                    break;
+                }
+            }
+        }
+
+        if ($variant->availableStock() < ($existingQty + $quantity)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Stok untuk ukuran '.$variant->size().' tidak mencukupi.',
@@ -75,13 +99,30 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:0|max:99',
         ]);
 
+        $variant = ProductVariant::with('product')->findOrFail((int) $data['variant_id']);
         $quantity = (int) $data['quantity'];
 
         if ($quantity === 0) {
-            $this->forget($request, (int) $data['variant_id']);
-        } else {
-            $this->put($request, (int) $data['variant_id'], $quantity);
+            $this->forget($request, $variant->id);
+
+            return $this->respond($request, ['success' => true]);
         }
+
+        if ($variant->product?->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Produk ini sudah tidak aktif.',
+            ], 422);
+        }
+
+        if ($variant->availableStock() < $quantity) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Stok untuk ukuran '.$variant->size().' tidak mencukupi.',
+            ], 422);
+        }
+
+        $this->setQuantity($request, $variant->id, $quantity);
 
         return $this->respond($request, ['success' => true]);
     }
@@ -220,6 +261,66 @@ class CartController extends Controller
         $request->session()->put($this->sessionKey($request), $rows);
     }
 
+    /**
+     * Overwrite the line quantity in the cart.
+     */
+    protected function setQuantity(Request $request, int $variantId, int $quantity): void
+    {
+        if ($request->user()) {
+            $cart = $this->cart($request, true);
+            $item = $cart->items()->firstOrNew(['product_variant_id' => $variantId]);
+            $item->quantity = $quantity;
+            $item->save();
+
+            return;
+        }
+
+        $rows = $request->session()->get($this->sessionKey($request), []);
+
+        foreach ($rows as $index => $row) {
+            if ((int) $row['product_variant_id'] === $variantId) {
+                $rows[$index]['quantity'] = $quantity;
+                $request->session()->put($this->sessionKey($request), $rows);
+
+                return;
+            }
+        }
+
+        $rows[] = ['product_variant_id' => $variantId, 'quantity' => $quantity];
+        $request->session()->put($this->sessionKey($request), $rows);
+    }
+
+    /**
+     * Merge guest session cart items into the authenticated user database cart.
+     */
+    public function mergeSessionCartToUser(Request $request, User $user): void
+    {
+        $sessionKey = $this->sessionKey($request);
+        $rows = $request->session()->get($sessionKey, []);
+
+        if (empty($rows)) {
+            return;
+        }
+
+        $cart = $user->carts()->latest('id')->first();
+        if (! $cart) {
+            $cart = Cart::create(['user_id' => $user->id]);
+        }
+
+        foreach ($rows as $row) {
+            $variantId = (int) ($row['product_variant_id'] ?? 0);
+            $quantity = (int) ($row['quantity'] ?? 0);
+
+            if ($variantId > 0 && $quantity > 0) {
+                $item = $cart->items()->firstOrNew(['product_variant_id' => $variantId]);
+                $item->quantity = ($item->exists ? $item->quantity : 0) + $quantity;
+                $item->save();
+            }
+        }
+
+        $request->session()->forget($sessionKey);
+    }
+
     protected function forget(Request $request, int $variantId): void
     {
         if ($request->user()) {
@@ -257,18 +358,14 @@ class CartController extends Controller
     }
 
     /**
-     * Pick the variant matching the requested size, falling back to the first one.
+     * Pick the variant matching the requested size, falling back to the first one only when size is omitted.
      */
     protected function resolveVariant(Product $product, ?string $size): ?ProductVariant
     {
-        if ($size) {
-            $variant = $product->variants->first(
-                fn (ProductVariant $variant) => strcasecmp($variant->size(), $size) === 0
+        if ($size !== null && trim($size) !== '') {
+            return $product->variants->first(
+                fn (ProductVariant $variant) => strcasecmp($variant->size(), trim($size)) === 0
             );
-
-            if ($variant) {
-                return $variant;
-            }
         }
 
         return $product->variants->first();

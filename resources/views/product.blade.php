@@ -28,7 +28,7 @@
       </div>
 
       <div class="sizes" role="group" aria-label="Select size">
-        @php $activeSize = $product->variants->first()->size() ?? 'M'; @endphp
+        @php $activeSize = $product->variants->first()?->size() ?? 'M'; @endphp
         @foreach ($product->variants as $variant)
           <button type="button" data-size="{{ $variant->size() }}" class="{{ $variant->size() === $activeSize ? 'active' : '' }}">{{ $variant->size() }}</button>
         @endforeach
@@ -72,7 +72,7 @@
             @endif
             <img src="{{ $item->image }}" alt="{{ $item->name }}" loading="lazy">
             <a class="product-image-link" href="{{ route('product.show', $item->slug) }}" aria-label="{{ $item->name }}"></a>
-            <button class="quick-add" type="button" data-add-to-cart data-product-id="{{ $item->id }}" data-size="{{ $item->variants->first()->size() ?? 'M' }}">QUICK ADD <span>+</span></button>
+            <button class="quick-add" type="button" data-add-to-cart data-product-id="{{ $item->id }}" data-size="{{ $item->variants->first()?->size() ?? 'M' }}">QUICK ADD <span>+</span></button>
           </div>
           <div class="product-meta">
             <span>{{ $item->category->name }}</span>

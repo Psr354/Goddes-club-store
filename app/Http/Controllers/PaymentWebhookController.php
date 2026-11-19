@@ -10,6 +10,7 @@ use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PaymentWebhookController extends Controller
 {
@@ -39,9 +40,13 @@ class PaymentWebhookController extends Controller
             ?? ($payload['transaction']['status'] ?? 'pending')
         );
 
-        $paymentMethod = $payload['payment_type']
+        $rawPaymentMethod = (string) ($payload['payment_type']
             ?? $payload['payment_method']
-            ?? 'qris';
+            ?? 'qris');
+        $paymentMethod = preg_replace('/[^a-zA-Z0-9_-]/', '', $rawPaymentMethod);
+        if ($paymentMethod === '') {
+            $paymentMethod = 'qris';
+        }
 
         $order = Order::where('invoice_number', $invoiceNumber)
             ->with(['items.variant.product', 'payment', 'user'])
@@ -54,24 +59,60 @@ class PaymentWebhookController extends Controller
             ], 404);
         }
 
-        // Enforce HMAC SHA512 signature check when server key is configured or in production
+        // Enforce HMAC SHA512 signature check unconditionally
         $serverKey = MidtransService::serverKey();
-        if ($serverKey || app()->isProduction()) {
-            $signatureKey = (string) ($payload['signature_key'] ?? '');
-            $statusCode = (string) ($payload['status_code'] ?? '');
-            $grossAmount = (string) ($payload['gross_amount'] ?? '');
-            $orderId = (string) ($payload['order_id'] ?? $invoiceNumber);
+        if (empty($serverKey)) {
+            Log::critical('Payment webhook received but MIDTRANS_SERVER_KEY is not configured.');
 
-            if (! $signatureKey || ! MidtransService::verifySignature($orderId, $statusCode, $grossAmount, $signatureKey)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid or missing webhook signature.',
-                ], 403);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment gateway misconfiguration.',
+            ], 500);
+        }
+
+        $signatureKey = (string) ($payload['signature_key'] ?? '');
+        $statusCode = (string) ($payload['status_code'] ?? '');
+        $grossAmount = (string) ($payload['gross_amount'] ?? '');
+        $orderId = (string) ($payload['order_id'] ?? $invoiceNumber);
+
+        if (! $signatureKey || ! MidtransService::verifySignature($orderId, $statusCode, $grossAmount, $signatureKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or missing webhook signature.',
+            ], 403);
         }
 
         // 3. Process status transition
         if (in_array($rawStatus, ['settlement', 'capture', 'paid', 'success'])) {
+            $fraudStatus = strtolower((string) ($payload['fraud_status'] ?? 'accept'));
+            if ($rawStatus === 'capture') {
+                if ($fraudStatus === 'challenge') {
+                    return response()->json([
+                        'success' => true,
+                        'message' => "Order {$invoiceNumber} is challenged by fraud detection system.",
+                        'status' => 'challenge',
+                    ]);
+                }
+                if ($fraudStatus !== 'accept') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Fraud status rejected.',
+                    ], 400);
+                }
+            }
+
+            $payloadGrossAmount = (float) ($payload['gross_amount'] ?? 0);
+            $rate = (float) config('services.midtrans.usd_to_idr_rate', 1.0);
+            $multiplier = $rate > 0 ? $rate : 1.0;
+            $expectedGrossAmount = (float) round($order->grand_total * $multiplier);
+
+            if (abs($payloadGrossAmount - $expectedGrossAmount) > 0.01) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gross amount mismatch.',
+                ], 400);
+            }
+
             $this->processSettlement($order, $paymentMethod, $payload);
 
             return response()->json([
@@ -103,14 +144,20 @@ class PaymentWebhookController extends Controller
      */
     public function processSettlement(Order $order, string $paymentMethod, array $rawPayload): void
     {
-        // Idempotency: if already paid, do nothing
-        if ($order->status === 'paid' || $order->status === 'processing' || $order->status === 'shipped' || $order->status === 'completed') {
-            return;
-        }
-
         DB::transaction(function () use ($order, $paymentMethod, $rawPayload) {
+            $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+
+            // Only pending_payment orders can transition to paid via settlement
+            if (! $lockedOrder || $lockedOrder->status !== 'pending_payment') {
+                if ($lockedOrder && $lockedOrder->status === 'cancelled') {
+                    Log::warning("Late settlement webhook received for cancelled order #{$lockedOrder->invoice_number}. Manual review or refund required.");
+                }
+
+                return;
+            }
+
             // Update Payment
-            $payment = $order->payment ?? Payment::firstOrNew(['order_id' => $order->id]);
+            $payment = $lockedOrder->payment ?? Payment::firstOrNew(['order_id' => $lockedOrder->id]);
             $payment->status = 'paid';
             $payment->payment_method = $paymentMethod;
             $payment->paid_at = now();
@@ -118,11 +165,11 @@ class PaymentWebhookController extends Controller
             $payment->save();
 
             // Update Order status
-            $order->status = 'paid';
-            $order->save();
+            $lockedOrder->status = 'paid';
+            $lockedOrder->save();
 
             // Deduct stock permanently and release reserved stock
-            foreach ($order->items as $item) {
+            foreach ($lockedOrder->items as $item) {
                 $variant = ProductVariant::where('id', $item->product_variant_id)
                     ->lockForUpdate()
                     ->first();
@@ -139,7 +186,7 @@ class PaymentWebhookController extends Controller
             }
 
             // Add Order Tracking event
-            $order->trackings()->create([
+            $lockedOrder->trackings()->create([
                 'status' => 'paid',
                 'title' => 'Pembayaran Berhasil Dikonfirmasi',
                 'description' => 'Pembayaran diterima melalui '.strtoupper($paymentMethod).'. Merch favoritmu sedang kami siapkan.',
@@ -162,23 +209,34 @@ class PaymentWebhookController extends Controller
      */
     public function processFailure(Order $order, array $rawPayload): void
     {
-        if ($order->status === 'cancelled') {
-            return;
-        }
-
         DB::transaction(function () use ($order, $rawPayload) {
+            $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+
+            // Only pending_payment orders can be cancelled via webhook failure
+            if (! $lockedOrder || $lockedOrder->status !== 'pending_payment') {
+                return;
+            }
+
             // Update Payment
-            $payment = $order->payment ?? Payment::firstOrNew(['order_id' => $order->id]);
+            $payment = $lockedOrder->payment ?? Payment::firstOrNew(['order_id' => $lockedOrder->id]);
             $payment->status = 'failed';
             $payment->raw_response = $rawPayload;
             $payment->save();
 
             // Update Order status
-            $order->status = 'cancelled';
-            $order->save();
+            $lockedOrder->status = 'cancelled';
+            $lockedOrder->save();
+
+            // Restore coupon quota if applied
+            if ($lockedOrder->coupon_id) {
+                $coupon = $lockedOrder->coupon()->lockForUpdate()->first();
+                if ($coupon && $coupon->used_count > 0) {
+                    $coupon->decrement('used_count');
+                }
+            }
 
             // Release reserved stock back to available pool
-            foreach ($order->items as $item) {
+            foreach ($lockedOrder->items as $item) {
                 $variant = ProductVariant::where('id', $item->product_variant_id)
                     ->lockForUpdate()
                     ->first();
@@ -189,7 +247,7 @@ class PaymentWebhookController extends Controller
             }
 
             // Add Order Tracking event
-            $order->trackings()->create([
+            $lockedOrder->trackings()->create([
                 'status' => 'cancelled',
                 'title' => 'Pesanan Dibatalkan',
                 'description' => 'Pembayaran tidak diselesaikan atau kedaluwarsa. Stok barang telah dikembalikan ke etalase.',

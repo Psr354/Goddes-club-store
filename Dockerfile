@@ -16,4 +16,6 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 RUN composer dump-autoload --optimize
 
 EXPOSE 8000
+# Default command runs development server for local container testing.
+# For production workloads, deploy using PHP-FPM with Nginx or Laravel Octane.
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

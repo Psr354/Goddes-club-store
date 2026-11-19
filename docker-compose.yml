@@ -32,8 +32,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:-goddess_secret}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   mailpit:
     image: axllent/mailpit:latest

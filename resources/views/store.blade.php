@@ -52,7 +52,7 @@
       @forelse ($categories as $category)
         @foreach ($category->products as $product)
           @php
-            $defaultSize = $product->variants->first()->size() ?? 'M';
+            $defaultSize = $product->variants->first()?->size() ?? 'M';
             $badge = $product->label();
             $isGold = strcasecmp((string) $product->tag, 'Limited edition') === 0;
           @endphp

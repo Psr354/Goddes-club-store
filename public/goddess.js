@@ -26,6 +26,16 @@
 
   const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 
+  const escapeHtml = (str) => {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
   /* ------------------------------------------------------------- toast */
 
   let toastTimer = null;
@@ -122,10 +132,10 @@
       .map(
         (item) => `
         <div class="cart-item">
-          <img src="${item.image || ''}" alt="${item.name}">
+          <img src="${escapeHtml(item.image || '')}" alt="${escapeHtml(item.name || '')}">
           <div>
-            <h3>${item.name}</h3>
-            <p>SIZE ${item.size} &middot; ${money(item.price)}</p>
+            <h3>${escapeHtml(item.name || '')}</h3>
+            <p>SIZE ${escapeHtml(item.size || '')} &middot; ${money(item.price)}</p>
             <div class="quantity">
               <button type="button" data-cart-change="-1" data-variant="${item.variant_id}">&minus;</button>
               <span>${item.quantity}</span>
@@ -515,7 +525,7 @@
     const { ok, data } = await api('/api/track', 'POST', { order: reference });
 
     if (!ok) {
-      box.innerHTML = `<p class="admin-note error">${data.message || 'Order not found.'}</p>`;
+      box.innerHTML = `<p class="admin-note error">${escapeHtml(data.message || 'Order not found.')}</p>`;
       box.hidden = false;
       return;
     }
@@ -526,16 +536,16 @@
         <div class="${step.done ? 'done' : ''} ${step.current ? 'current' : ''}">
           <b>${step.done ? '&check;' : index + 1}</b>
           <section>
-            <h3>${step.label}</h3>
-            <p>${step.description}</p>
+            <h3>${escapeHtml(step.label)}</h3>
+            <p>${escapeHtml(step.description)}</p>
           </section>
         </div>`
       )
       .join('');
 
     box.innerHTML = `
-      <h3>Order ${data.reference}</h3>
-      <p class="muted">${data.invoice_number}${data.tracking_number ? ' &middot; ' + data.tracking_number : ''}</p>
+      <h3>Order ${escapeHtml(data.reference)}</h3>
+      <p class="muted">${escapeHtml(data.invoice_number)}${data.tracking_number ? ' &middot; ' + escapeHtml(data.tracking_number) : ''}</p>
       <div class="timeline">${steps}</div>`;
     box.hidden = false;
   }

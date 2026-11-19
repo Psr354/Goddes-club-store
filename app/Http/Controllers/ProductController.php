@@ -15,6 +15,7 @@ class ProductController extends Controller
     {
         $product = Product::with(['category', 'variants'])
             ->where('slug', $slug)
+            ->active()
             ->firstOrFail();
 
         $related = Product::with(['category', 'variants'])

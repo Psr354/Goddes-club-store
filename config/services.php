@@ -39,6 +39,8 @@ return [
         'server_key' => env('MIDTRANS_SERVER_KEY'),
         'client_key' => env('MIDTRANS_CLIENT_KEY'),
         'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
+        'currency' => env('MIDTRANS_CURRENCY', 'USD'),
+        'usd_to_idr_rate' => (float) env('MIDTRANS_USD_TO_IDR_RATE', 1.0),
     ],
 
 ];

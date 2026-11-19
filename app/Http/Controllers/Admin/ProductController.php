@@ -72,6 +72,11 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
+        $hasOrders = $product->variants()->whereHas('orderItems')->exists();
+        if ($hasOrders) {
+            return back()->with('error', 'Produk tidak dapat dihapus karena sudah memiliki riwayat transaksi pemesanan. Ubah status menjadi archived.');
+        }
+
         $product->variants()->delete();
         $product->delete();
 
@@ -92,6 +97,13 @@ class ProductController extends Controller
             'image' => 'nullable|string|max:500',
             'tag' => 'nullable|string|max:50',
             'kind' => 'nullable|string|max:30',
+            'sizes' => 'nullable|array',
+            'sizes.*' => 'nullable|string|max:30',
+            'variant_prices' => 'nullable|array',
+            'variant_prices.*' => 'nullable|numeric|min:0',
+            'variant_stocks' => 'nullable|array',
+            'variant_stocks.*' => 'nullable|integer|min:0',
+            'weight_gram' => 'nullable|integer|min:1|max:100000',
         ]);
 
         $data['slug'] = Str::slug($data['slug']);
@@ -130,6 +142,17 @@ class ProductController extends Controller
             $keep[] = $variant->id;
         }
 
-        $product->variants()->whereNotIn('id', $keep ?: [0])->delete();
+        $candidates = $product->variants()->whereNotIn('id', $keep ?: [0])->get();
+        foreach ($candidates as $candidate) {
+            if ($candidate->orderItems()->exists()) {
+                $candidate->update(['stock' => 0]);
+            } else {
+                $candidate->cartItems()->delete();
+                $candidate->delete();
+            }
+        }
+
+        $totalVariantStock = (int) $product->variants()->sum('stock');
+        $product->update(['stock' => $totalVariantStock]);
     }
 }

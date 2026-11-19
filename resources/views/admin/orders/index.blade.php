@@ -61,7 +61,7 @@
               <div>{{ $order->user?->name ?? 'Guest Member' }}</div>
               <small style="color:#8e836e;">{{ $order->user?->email ?? ($order->address?->email ?? '—') }}</small>
             </td>
-            <td class="admin-mono">{{ $order->items()->sum('quantity') }} pcs</td>
+            <td class="admin-mono">{{ $order->total_quantity ?? 0 }} pcs</td>
             <td class="admin-mono">${{ number_format($order->grand_total, 2) }}</td>
             <td>
               <span class="admin-status {{ in_array($order->status, ['completed', 'shipped']) ? 'success' : ($order->status === 'cancelled' ? 'muted' : ($order->status === 'pending_payment' ? 'muted' : '')) }}">

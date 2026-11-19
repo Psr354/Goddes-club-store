@@ -22,7 +22,7 @@ class MidtransService
      */
     public static function serverKey(): ?string
     {
-        return config('services.midtrans.server_key') ?? env('MIDTRANS_SERVER_KEY');
+        return config('services.midtrans.server_key');
     }
 
     /**
@@ -30,7 +30,7 @@ class MidtransService
      */
     public static function clientKey(): ?string
     {
-        return config('services.midtrans.client_key') ?? env('MIDTRANS_CLIENT_KEY');
+        return config('services.midtrans.client_key');
     }
 
     /**
@@ -38,7 +38,7 @@ class MidtransService
      */
     public static function isProduction(): bool
     {
-        return (bool) (config('services.midtrans.is_production') ?? env('MIDTRANS_IS_PRODUCTION', false));
+        return (bool) config('services.midtrans.is_production', false);
     }
 
     /**
@@ -68,13 +68,15 @@ class MidtransService
     {
         $serverKey = self::serverKey();
         $endpoint = self::isProduction() ? self::PRODUCTION_SNAP_URL : self::SANDBOX_SNAP_URL;
+        $rate = (float) config('services.midtrans.usd_to_idr_rate', 1.0);
+        $multiplier = $rate > 0 ? $rate : 1.0;
 
         // Build item details according to Midtrans specification
         $itemDetails = [];
         foreach ($order->items as $item) {
             $itemDetails[] = [
                 'id' => (string) $item->product_variant_id,
-                'price' => (int) round($item->unit_price),
+                'price' => (int) round($item->unit_price * $multiplier),
                 'quantity' => (int) $item->quantity,
                 'name' => mb_strimwidth($item->product_name.($item->sku ? ' ('.$item->sku.')' : ''), 0, 48),
             ];
@@ -84,7 +86,7 @@ class MidtransService
         if ($order->discount_amount > 0) {
             $itemDetails[] = [
                 'id' => 'DISCOUNT',
-                'price' => -(int) round($order->discount_amount),
+                'price' => -(int) round($order->discount_amount * $multiplier),
                 'quantity' => 1,
                 'name' => 'Diskon Promo',
             ];
@@ -94,13 +96,13 @@ class MidtransService
         if ($order->shipping_fee > 0) {
             $itemDetails[] = [
                 'id' => 'SHIPPING',
-                'price' => (int) round($order->shipping_fee),
+                'price' => (int) round($order->shipping_fee * $multiplier),
                 'quantity' => 1,
                 'name' => 'Ongkos Kirim ('.($order->courier_code ?: 'JNE').')',
             ];
         }
 
-        $grossAmount = (int) round($order->grand_total);
+        $grossAmount = (int) round($order->grand_total * $multiplier);
 
         $payload = [
             'transaction_details' => [
@@ -148,6 +150,10 @@ class MidtransService
             } catch (\Throwable $e) {
                 Log::error('Midtrans Snap request exception: '.$e->getMessage());
             }
+        }
+
+        if (app()->isProduction() || self::isProduction()) {
+            throw new \RuntimeException('Gagal menghubungkan ke gateway pembayaran Midtrans. Silakan coba kembali.');
         }
 
         // Graceful sandbox simulated fallback for offline/development testing

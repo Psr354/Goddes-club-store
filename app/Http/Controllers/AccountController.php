@@ -18,12 +18,7 @@ class AccountController extends Controller
      */
     public function index(Request $request)
     {
-        $user = Auth::user();
-
-        // If not logged in, redirect to login
-        if (! $user) {
-            return redirect()->route('login');
-        }
+        $user = $request->user();
 
         // If user is admin, redirect to admin dashboard
         if ($user->isAdmin()) {
@@ -55,15 +50,12 @@ class AccountController extends Controller
      */
     public function updateProfile(Request $request): RedirectResponse
     {
-        $user = Auth::user();
-        if (! $user) {
-            return redirect()->route('login');
-        }
+        $user = $request->user();
 
         $validated = $request->validate([
             'name' => 'required|string|max:80',
             'email' => 'required|email|max:120|unique:users,email,'.$user->id,
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|string|max:30|unique:users,phone,'.$user->id,
         ]);
 
         $user->update($validated);
@@ -76,10 +68,7 @@ class AccountController extends Controller
      */
     public function storeAddress(Request $request): RedirectResponse
     {
-        $user = Auth::user();
-        if (! $user) {
-            return redirect()->route('login');
-        }
+        $user = $request->user();
 
         $validated = $request->validate([
             'recipient_name' => 'required|string|max:120',
@@ -112,11 +101,15 @@ class AccountController extends Controller
     /**
      * Delete an address belonging to the user.
      */
-    public function destroyAddress(UserAddress $address): RedirectResponse
+    public function destroyAddress(Request $request, UserAddress $address): RedirectResponse
     {
-        $user = Auth::user();
-        if (! $user || $address->user_id !== $user->id) {
+        $user = $request->user();
+        if ($address->user_id !== $user->id) {
             abort(403);
+        }
+
+        if ($address->orders()->exists()) {
+            return back()->with('error', 'Alamat tidak dapat dihapus karena tercatat dalam riwayat pesanan.');
         }
 
         $address->delete();
