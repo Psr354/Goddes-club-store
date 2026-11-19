@@ -10,6 +10,18 @@ class Order extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING_PAYMENT = 'pending_payment';
+
+    public const STATUS_PAID = 'paid';
+
+    public const STATUS_PROCESSING = 'processing';
+
+    public const STATUS_SHIPPED = 'shipped';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
     protected $fillable = [
         'user_id',
         'invoice_number',

@@ -55,7 +55,7 @@
           <tr>
             <td>
               <strong>#{{ $order->reference() }}</strong>
-              <small>{{ $order->created_at->format('d M Y') }}</small>
+              <small>{{ $order->invoice_number }} &middot; {{ $order->created_at->format('d M Y') }}</small>
             </td>
             <td>
               <div>{{ $order->user?->name ?? 'Guest Member' }}</div>
