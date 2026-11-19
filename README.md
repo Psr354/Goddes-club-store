@@ -95,7 +95,10 @@ docker compose up -d --build
 docker compose exec app php artisan key:generate
 
 # 5. Jalankan migrasi basis data dan seeder data awal
-docker compose exec app php artisan migrate:refresh --seed
+docker compose exec app php artisan migrate --seed
+
+# 6. Buat tautan simbolik direktori storage publik (untuk media produk)
+docker compose exec app php artisan storage:link
 ```
 
 Layanan siap digunakan dan dapat langsung diakses melalui peramban:
@@ -175,7 +178,7 @@ Aplikasi menerapkan sistem **"Satu Login, Dua Dashboard"** dengan verifikasi rol
 
 ## 🧪 Menjalankan Automated Tests
 
-Seluruh pengujian unit dan fitur telah lulus (26 tests):
+Seluruh pengujian unit dan fitur telah lulus (42 tests):
 
 ```bash
 docker compose exec app php artisan test
