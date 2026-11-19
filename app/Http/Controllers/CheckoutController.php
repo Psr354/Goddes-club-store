@@ -137,7 +137,7 @@ class CheckoutController extends Controller
                 // 3. Create Order
                 $order = Order::create([
                     'user_id' => $user->id,
-                    'invoice_number' => 'GCS-'.strtoupper(Str::random(8)),
+                    'invoice_number' => 'GCS-'.date('YmdHis').'-'.strtoupper(Str::random(4)),
                     'address_id' => $address->id,
                     'coupon_id' => $coupon?->id,
                     'subtotal' => $subtotal,

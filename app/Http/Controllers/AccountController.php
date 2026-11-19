@@ -25,10 +25,11 @@ class AccountController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        // Fetch real orders from database if available
+        // Fetch real orders from database if available (capped to protect memory)
         $orders = Order::where('user_id', $user->id)
             ->with(['items.product', 'items.variant', 'address', 'trackings', 'payment'])
             ->latest()
+            ->limit(50)
             ->get();
 
         // Fetch addresses
@@ -112,7 +113,12 @@ class AccountController extends Controller
             return back()->with('error', 'Alamat tidak dapat dihapus karena tercatat dalam riwayat pesanan.');
         }
 
+        $wasPrimary = (bool) $address->is_primary;
         $address->delete();
+
+        if ($wasPrimary) {
+            $user->addresses()->latest('id')->first()?->update(['is_primary' => true]);
+        }
 
         return back()->with('account_notice', 'Alamat pengiriman berhasil dihapus.');
     }
